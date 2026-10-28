@@ -15,7 +15,8 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
    For a horizontal video, use `scale=960:540`.
 3. Add an entry at the top of `window.VIDEOS` in `videos.js`. Set `ratio: "16:9"` for a horizontal video (vertical `"9:16"` is the default).
    Each format gets its own section with cards in its real shape, and once both formats exist the page shows filter buttons (All / Vertical / Horizontal).
-4. Commit and push; GitHub Pages updates in about a minute.
+4. In `index.html`, bump the number in `videos.js?v=…` so browsers fetch the new list instead of a cached one.
+5. Commit and push; GitHub Pages updates in about a minute.
 
 ## Contact
 `window.CONTACT` in `videos.js`: `email`, and `whatsapp` (digits only, international format). An empty value hides that button.

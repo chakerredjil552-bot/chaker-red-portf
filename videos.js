@@ -9,7 +9,7 @@ window.VIDEOS = [
     tag: "Explainer · Motion graphics",
     ratio: "16:9",
     duration: "1:30",
-    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    socialLikes: 160, // real likes this video got on social media; site likes add on top
     file: "videos/pi-motion-film.mp4",
     thumb: "thumbs/pi-motion-film.jpg",
   },
