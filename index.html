@@ -58,6 +58,8 @@
   .meta { padding: 14px 16px 16px; }
   .meta h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.3; }
   .meta p { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+  .meta p:has(+ .note) { margin-bottom: 2px; }
+  .meta .note { font-size: 11px; opacity: .75; }
   .links { display: flex; gap: 8px; }
   .chip { flex: 1; text-align: center; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 10px; cursor: pointer;
     border: 1px solid var(--line); background: transparent; color: var(--text); text-decoration: none; }
@@ -151,8 +153,9 @@
       <div class="meta">
         <h3>${v.title}</h3>
         <p>${v.tag || ""}</p>
+        ${v.socialLikes ? '<p class="note">♥ includes likes on social media</p>' : ""}
         <div class="links">
-          <button class="like" data-like="${i}" aria-label="Like ${v.title}">${ICON.heart}<span class="n">…</span></button>
+          <button class="like" data-like="${i}" aria-label="Like ${v.title}" title="${v.socialLikes ? "Includes likes on social media" : ""}">${ICON.heart}<span class="n">…</span></button>
           <button class="chip" data-copy="${i}">Copy link</button>
           <a class="chip" href="${v.file}" target="_blank" rel="noopener">Open file</a>
         </div>
@@ -163,7 +166,8 @@
   const API = "https://abacus.jasoncameron.dev", NS = "chaker-red-portf";
   const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M" : n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K" : String(n);
   const liked = (id) => { try { return localStorage.getItem("liked:" + id) === "1"; } catch { return false; } };
-  const setCount = (i, n) => document.querySelectorAll(`[data-like="${i}"] .n`).forEach((el) => (el.textContent = fmt(n)));
+  // shown = real likes from social media (videos.js) + likes on this site
+  const setCount = (i, n) => document.querySelectorAll(`[data-like="${i}"] .n`).forEach((el) => (el.textContent = fmt((V[i].socialLikes || 0) + n)));
   V.forEach((v, i) => {
     if (liked(v.id)) document.querySelector(`[data-like="${i}"]`).classList.add("on");
     fetch(`${API}/get/${NS}/${v.id}`).then((r) => (r.ok ? r.json() : { value: 0 })).then((d) => setCount(i, Math.max(0, d.value || 0)))
