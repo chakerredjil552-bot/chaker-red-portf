@@ -1,7 +1,18 @@
 // The videos on the site, newest first. To add one:
 //   1. put the file in videos/ (720x1280 H.264 + AAC, "-movflags +faststart") and a 540x960 cover in thumbs/
 //   2. add an entry below (socialLikes = its real like count on social media, or 0); `id` is the video's own link: https://<site>/#<id>
+//   ratio: "9:16" (vertical, the default) or "16:9" (horizontal); each format gets its own section and filter button
 window.VIDEOS = [
+  {
+    id: "pi-motion-film",
+    title: "π — a motion film",
+    tag: "Explainer · Motion graphics",
+    ratio: "16:9",
+    duration: "1:30",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/pi-motion-film.mp4",
+    thumb: "thumbs/pi-motion-film.jpg",
+  },
   {
     id: "tina-beauty-ad",
     title: "Tîna Beauty — Reel ad",
