@@ -39,5 +39,5 @@ window.VIDEOS = [
 // Contact shown in the header and footer. Leave a value empty ("") to hide it.
 window.CONTACT = {
   email: "chakerredjil552@gmail.com",
-  whatsapp: "", // international format, digits only, e.g. "213555123456"
+  whatsapp: "213559709603", // international format, digits only
 };
