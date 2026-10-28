@@ -82,8 +82,48 @@
   .close { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
     background: var(--panel); color: var(--text); font-size: 22px; cursor: pointer; }
 
-  footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
-  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+  .cta { padding: 8px 0 56px; }
+  .cta-box { position: relative; overflow: hidden; text-align: center; padding: 48px 24px; border-radius: 28px;
+    border: 1px solid var(--line); background: radial-gradient(60% 80% at 50% 0%, rgba(200,107,255,.18), transparent 70%), var(--panel); }
+  .cta-box h2 { margin: 0; font-size: clamp(28px, 5vw, 44px); letter-spacing: -.02em; }
+  .cta-box .lead { margin: 10px auto 28px; }
+  .cta-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+  .cta-link { display: flex; align-items: center; gap: 14px; min-width: 260px; padding: 14px 20px 14px 14px; border-radius: 18px;
+    text-decoration: none; text-align: left; border: 1px solid var(--line); background: var(--bg); transition: transform .2s, border-color .2s; }
+  .cta-link:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .cta-link .ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: #1a1406; }
+  .cta-link.wa .ic { background: #25d366; color: #fff; }
+  .cta-link.wa:hover { border-color: #25d366; }
+  .cta-link svg { width: 22px; height: 22px; }
+  .cta-link b { display: block; font-size: 16px; }
+  .cta-link small { display: block; color: var(--muted); font-size: 13px; word-break: break-all; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 32px; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  button, a { -webkit-tap-highlight-color: transparent; }
+
+  /* phones: two columns of cards, compact text, full-width contact */
+  @media (max-width: 640px) {
+    header { padding: 44px 0 28px; }
+    .lead { font-size: 16px; }
+    .contact { width: 100%; }
+    .contact .btn { flex: 1 1 auto; justify-content: center; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 40px; }
+    .card { border-radius: 16px; }
+    .play { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+    .play svg { width: 18px; height: 18px; }
+    .meta { padding: 10px 10px 12px; }
+    .meta h3 { font-size: 14px; }
+    .meta p { font-size: 12px; margin-bottom: 8px; }
+    .links { flex-wrap: wrap; gap: 6px; }
+    .like { flex: 1 0 100%; justify-content: center; }
+    .chip { font-size: 12px; padding: 7px 4px; }
+    .cta-box { padding: 36px 16px; border-radius: 22px; }
+    .cta-link { min-width: 0; width: 100%; }
+    .player { padding: 8px; }
+    .player video { max-height: calc(100vh - 90px); }
+  }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .3s;
     background: var(--accent); color: #1a1406; padding: 10px 16px; border-radius: 10px; font-weight: 500; z-index: 20; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -91,7 +131,7 @@
 </style>
 </head>
 <body>
-<header>
+<header id="top">
   <div class="wrap hero">
     <div>
       <p class="nick">Chaker Red</p>
@@ -107,8 +147,19 @@
   <div class="grid" id="grid"></div>
 </main>
 
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-box">
+      <p class="nick">Contact</p>
+      <h2>Let's make your next video</h2>
+      <p class="lead">Ads, promos and motion design. Send me a message.</p>
+      <div class="cta-links" id="cta-links"></div>
+    </div>
+  </div>
+</section>
+
 <footer>
-  <div class="wrap"><span>© <span id="year"></span> Chaker Redjil</span><span id="foot-contact"></span></div>
+  <div class="wrap"><span>© <span id="year"></span> Chaker Redjil · Chaker Red</span><a href="#top">Back to top ↑</a></div>
 </footer>
 
 <div class="player" id="player" role="dialog" aria-modal="true" aria-label="Video player">
@@ -136,7 +187,10 @@
   if (CT.email) links.push(`<a class="btn primary" href="mailto:${CT.email}">${ICON.mail}${CT.email}</a>`);
   if (CT.whatsapp) links.push(`<a class="btn" href="https://wa.me/${CT.whatsapp}" target="_blank" rel="noopener">${ICON.wa}WhatsApp</a>`);
   $("contact").innerHTML = links.join("");
-  $("foot-contact").innerHTML = links.length ? links.map((l) => l.replace(/class="btn[^"]*"/, "")).join(" · ") : "";
+  const big = [];
+  if (CT.email) big.push(`<a class="cta-link" href="mailto:${CT.email}"><span class="ic">${ICON.mail}</span><span><b>Email</b><small>${CT.email}</small></span></a>`);
+  if (CT.whatsapp) big.push(`<a class="cta-link wa" href="https://wa.me/${CT.whatsapp}" target="_blank" rel="noopener"><span class="ic">${ICON.wa}</span><span><b>WhatsApp</b><small>+${CT.whatsapp.replace(/^(\d{3})(\d{3})(\d{2})(\d{2})(\d{2})$/, "$1 $2 $3 $4 $5")}</small></span></a>`);
+  $("cta-links").innerHTML = big.join("");
   $("year").textContent = new Date().getFullYear();
   $("count").textContent = `${V.length} video${V.length === 1 ? "" : "s"}`;
 
