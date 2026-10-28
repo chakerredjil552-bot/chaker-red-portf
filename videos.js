@@ -4,6 +4,16 @@
 //   ratio: "9:16" (vertical, the default) or "16:9" (horizontal); each format gets its own section and filter button
 window.VIDEOS = [
   {
+    id: "golden-angle-film",
+    title: "137.5° — the golden angle",
+    tag: "Explainer · Motion graphics",
+    ratio: "16:9",
+    duration: "1:30",
+    socialLikes: 160, // real likes this video got on social media; site likes add on top
+    file: "videos/golden-angle-film.mp4",
+    thumb: "thumbs/golden-angle-film.jpg",
+  },
+  {
     id: "pi-motion-film",
     title: "π — a motion film",
     tag: "Explainer · Motion graphics",
