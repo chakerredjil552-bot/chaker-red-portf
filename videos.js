@@ -24,6 +24,15 @@ window.VIDEOS = [
     thumb: "thumbs/pi-motion-film.jpg",
   },
   {
+    id: "bushra-school-channel",
+    title: "Bushra's School — join our Instagram channel",
+    tag: "Reel · Motion design",
+    duration: "0:40",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/bushra-school-channel.mp4",
+    thumb: "thumbs/bushra-school-channel.jpg",
+  },
+  {
     id: "tina-beauty-ad",
     title: "Tîna Beauty — Reel ad",
     tag: "Ad · Motion design",
