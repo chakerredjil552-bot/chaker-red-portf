@@ -4,6 +4,16 @@
 //   ratio: "9:16" (vertical, the default) or "16:9" (horizontal); each format gets its own section and filter button
 window.VIDEOS = [
   {
+    id: "wasfati-ad",
+    title: "Wasfati — وصفتي · app launch ad",
+    tag: "Ad · Motion design",
+    ratio: "16:9",
+    duration: "0:38",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/wasfati-ad.mp4",
+    thumb: "thumbs/wasfati-ad.jpg",
+  },
+  {
     id: "golden-angle-film",
     title: "137.5° — the golden angle",
     tag: "Explainer · Motion graphics",
