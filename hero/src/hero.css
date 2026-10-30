@@ -39,7 +39,16 @@ html:has(.dh-pin), html:has(.dh-pin) body { overflow: hidden; height: 100%; over
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(70% 34% at 50% var(--ring-y-sky, 44%), rgba(13,11,16,.3), rgba(13,11,16,0) 100%);
 }
-@media (max-aspect-ratio: 5/6) { .dh-sky::after { --ring-y-sky: 36%; } }
+@media (max-aspect-ratio: 5/6) {
+  .dh-sky::after { --ring-y-sky: 36%; }
+  /* a landscape video cropped to a tall screen would be blown up 4-5 times: on phones it fills a band behind the ring
+     instead, fading into the dark, so it stays sharp and the runner stays in frame */
+  .dh-bgvid {
+    top: 2%; height: 72%; object-position: 27% 50%;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 78%, transparent);
+            mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 78%, transparent);
+  }
+}
 .dh-white { position: absolute; inset: 0; z-index: 0; background: #fff; pointer-events: none; }
 .dh-shade {
   position: absolute; inset: 0; z-index: 2; pointer-events: none;
