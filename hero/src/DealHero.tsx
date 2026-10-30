@@ -11,7 +11,7 @@ const EXPANSION_S = 1.9;
 const EXPANSION_EASE = [0.5, 0, 0.15, 1] as const;
 /** If the network never delivers, the reveal goes ahead this long after the deal has finished. */
 const PATIENCE_MS = 4500;
-const PANELS = "hero-assets/musashi-panels.webp";
+const BACKDROP = "hero-assets/musashi-bg.mp4", BACKDROP_POSTER = "hero-assets/musashi-bg.jpg";
 
 const html = document.documentElement;
 const SCROLL_KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
@@ -54,7 +54,6 @@ export function DealHero() {
   const [formed, setFormed] = useState(instant);
   const [late, setLate] = useState(false);
   const pin = useRef<HTMLDivElement>(null);
-  const sky = useRef<HTMLDivElement>(null);
   const runs = useRef<AnimationPlaybackControls[]>([]);
   const started = useRef(instant);
 
@@ -160,13 +159,13 @@ export function DealHero() {
     <>
       <div ref={pin} id="top" className="dh-pin">
         <section className="dh" aria-label={COPY.name}>
-          <m.div ref={sky} className="dh-sky" style={{ scale: skyScale }} aria-hidden="true">
-            <div className="dh-sky-track"><img src={PANELS} alt="" draggable={false} /><img src={PANELS} alt="" draggable={false} /></div>
+          <m.div className="dh-sky" style={{ scale: skyScale }} aria-hidden="true">
+            <video className="dh-bgvid" src={BACKDROP} poster={BACKDROP_POSTER} muted loop playsInline autoPlay={!reduced} preload="auto" disablePictureInPicture tabIndex={-1} />
           </m.div>
           <m.div className="dh-white" style={{ opacity: white }} aria-hidden="true" />
           <Wall
             reels={REELS} formation={formation} expansion={expansion} locked={entering} reduced={reduced}
-            preload={preload} onAsset={onAsset} onOpen={play} section={pin} playLabel={COPY.play} sky={sky}
+            preload={preload} onAsset={onAsset} onOpen={play} section={pin} playLabel={COPY.play}
           />
           <m.div className="dh-shade" style={{ opacity: shade }} aria-hidden="true" />
 

@@ -7,8 +7,8 @@ import type { Reel } from "./reels.ts";
 const SPIN = -3.4;
 /** At most this many previews play at once: the cards facing the camera, nearest the centre first. */
 const MAX_PLAY = 7;
-/** Scrolling the page turns the ring: down sends the cards right, up sends them left. Degrees per pixel. */
-const SCROLL_TURN = 0.12;
+/** Scrolling the page turns the ring: down sends the cards right, up sends them left. The whole page is one full turn. */
+const SCROLL_TURNS = 1;
 /** The backdrop pans with the ring, slower than the cards on the far wall (about a third), px per degree at fit 1. */
 const SKY_PAN = 2.2;
 
@@ -51,7 +51,7 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
 
   const written = useRef<Written[]>(Array.from({ length: SLOTS }, () => ({ yaw: NaN, y: NaN, d: NaN, o: NaN, vis: true, play: false })));
   const shared = useRef({ r: NaN, s: NaN, tilt: NaN, roll: NaN, persp: NaN });
-  const view = useRef({ w: 1, h: 1, fit: fitFor(1440, 900), strip: 0 });
+  const view = useRef({ w: 1, h: 1, fit: fitFor(1440, 900), strip: 0, turn: 0 });
   const skyAt = useRef(NaN);
   const pointer = useRef({ x: -1, y: -1, on: false });
   const hover = useRef(-1);
@@ -66,7 +66,8 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
   useLayoutEffect(() => {
     const size = () => {
       const w = window.innerWidth, h = window.innerHeight;
-      view.current = { w, h, fit: fitFor(w, h), strip: sky?.current?.querySelector("img")?.offsetWidth ?? 0 };
+      const range = document.documentElement.scrollHeight - h;
+      view.current = { w, h, fit: fitFor(w, h), strip: sky?.current?.querySelector("img")?.offsetWidth ?? 0, turn: range > 0 ? (360 * SCROLL_TURNS) / range : 0 };
     };
     size();
     window.addEventListener("resize", size);
@@ -115,7 +116,7 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
     }
     // the page's scroll turns the ring, whichever way it comes: wheel, touch, keys or the scrollbar
     const sy = window.scrollY;
-    if (lastScroll.current >= 0 && sy !== lastScroll.current && !lockedRef.current) target.set(target.get() - (sy - lastScroll.current) * SCROLL_TURN);
+    if (lastScroll.current >= 0 && sy !== lastScroll.current && !lockedRef.current) target.set(target.get() - (sy - lastScroll.current) * view.current.turn);
     lastScroll.current = sy;
     const R = angle.get();
     const fitNow = fit.a + (fit.b - fit.a) * ex;

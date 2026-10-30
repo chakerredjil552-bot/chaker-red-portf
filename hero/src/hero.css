@@ -28,11 +28,12 @@ html.deal-entering #deal:empty { background: #fff; }
 /* instead of a sky: Musashi manga panels, a strip that tiles sideways and pans with the ring */
 .dh-sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .dh-sky-track { position: absolute; top: 0; left: 0; height: 100%; display: flex; transform: translate3d(var(--pan, 0px), 0, 0); will-change: transform; }
+.dh-bgvid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .dh-sky-track img { display: block; flex: none; height: 100%; width: auto; max-width: none; -webkit-user-drag: none; }
 /* a shadow of ink behind the ring so the videos sit in front of the panels */
 .dh-sky::after {
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(70% 34% at 50% var(--ring-y-sky, 44%), rgba(13,11,16,.42), rgba(13,11,16,0) 100%);
+  background: radial-gradient(70% 34% at 50% var(--ring-y-sky, 44%), rgba(13,11,16,.3), rgba(13,11,16,0) 100%);
 }
 @media (max-aspect-ratio: 5/6) { .dh-sky::after { --ring-y-sky: 36%; } }
 .dh-white { position: absolute; inset: 0; z-index: 0; background: #fff; pointer-events: none; }

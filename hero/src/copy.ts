@@ -11,7 +11,7 @@ export const COPY = {
   loading: "Loading Reels",
   play: "Play",
   tagLeft: "Ads · Promos · Motion design",
-  tagRight: "Wisdom of Miyamoto Musashi · 1645",
+  tagRight: "Background: @rooketwrld on TikTok",
 };
 
 declare global {
