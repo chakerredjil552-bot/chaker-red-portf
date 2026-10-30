@@ -154,7 +154,7 @@ export function DealHero() {
 
   const wa = window.CONTACT?.whatsapp;
   const videos = window.VIDEOS?.length ?? 0;
-  const goVideos = () => document.getElementById("videos")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  const email = window.CONTACT?.email;
 
   return (
     <>
@@ -189,7 +189,7 @@ export function DealHero() {
             <Rise mv={expansion} from={0.58} to={0.95} className="dh-role-wrap"><span className="dh-role">{COPY.lead}</span></Rise>
             <Rise mv={expansion} from={0.64} to={1} className="dh-ctas-wrap">
               <span className="dh-ctas">
-                <button type="button" className="btn primary" onClick={goVideos}>{COPY.watch} ↓</button>
+                {email && <a className="btn primary" href={`mailto:${email}`}>{COPY.email}</a>}
                 {wa && <a className="btn" href={`https://wa.me/${wa}`} target="_blank" rel="noopener">{COPY.whatsapp}</a>}
               </span>
             </Rise>

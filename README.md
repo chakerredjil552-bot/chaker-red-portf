@@ -35,7 +35,7 @@ A ring of the videos where the loader and the hero are the same 3D scene: the ca
 page while a counter reads what has really loaded, then the camera moves inside the ring and the page clears onto a
 strip of manga panels with the wisdom of Miyamoto Musashi (his own words, from the Dokkōdō and the Gorin no Sho, 1645;
 the drawings are original). Drag, swipe or scroll to turn it: scrolling down sends the cards right, up sends them left.
-Click a card to play that video from the scene it shows. Escape, Tab or the Skip button end the entrance at once; with
+Click a card to play that video from the scene it shows. The page shows only the hero: the video grid, the contact box and the footer are hidden in `index.html` (one CSS line, `main#videos, .cta, footer { display: none; }`), and shared `#video-id` links still open their video. Escape, Tab or the Skip button end the entrance at once; with
 reduced motion, or on a link to one video (`#video-id`), there is no entrance.
 
 To change it: edit `hero/src/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and

@@ -11,7 +11,7 @@ html.deal-entering, html.deal-entering body { overflow: hidden; }
 html.deal-entering .topbar .tb-right { opacity: clamp(0, (var(--ex, 0) - .4) * 3.4, 1); translate: 0 calc((1 - clamp(0, (var(--ex, 0) - .4) * 3.4, 1)) * -12px); }
 html.deal-entering [data-wordmark] { opacity: clamp(0, (var(--ex, 0) - .549) * 1000, 1); }
 html.deal-entering .topbar::before { opacity: 0; }
-#deal:empty { height: 175vh; height: 175svh; }
+#deal:empty { height: 100vh; height: 100svh; }
 html.deal-entering #deal:empty { background: #fff; }
 
 .sr-only {
@@ -20,7 +20,7 @@ html.deal-entering #deal:empty { background: #fff; }
 }
 
 /* ---- the hero: pinned while the first stretch of scrolling turns the ring ---- */
-.dh-pin { position: relative; z-index: 2; height: 175vh; height: 175svh; }
+.dh-pin { position: relative; z-index: 2; height: 320vh; height: 320svh; } /* the scroll room that turns the ring */
 .dh {
   position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 520px; overflow: hidden; isolation: isolate;
   background: var(--bg, #0d0b10);
