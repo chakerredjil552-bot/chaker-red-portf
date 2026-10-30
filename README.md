@@ -6,6 +6,9 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 - `videos.js`: the list of videos and the contact details. **This is the only file to edit.**
 - `videos/`: the video files (720×1280 H.264 + AAC, fast start, kept small for the web)
 - `thumbs/`: one 540×960 cover image per video
+- `previews/`: short 9:16 clips (and their first frames) for the hero's ring of videos
+- `hero-assets/`: the built hero (`deal-hero.js`, `deal-hero.css`) and its backdrop, `musashi-panels.webp`
+- `hero/`: the hero's source (React + Motion, plain CSS 3D) and `hero/art/`, which draws the Musashi manga panels
 
 ## Add a video
 1. Compress it into `videos/<id>.mp4`:
@@ -15,8 +18,26 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
    For a horizontal video, use `scale=960:540`.
 3. Add an entry at the top of `window.VIDEOS` in `videos.js`. Set `ratio: "16:9"` for a horizontal video (vertical `"9:16"` is the default).
    Each format gets its own section with cards in its real shape, and once both formats exist the page shows filter buttons (All / Vertical / Horizontal).
-4. In `index.html`, bump the number in `videos.js?v=…` so browsers fetch the new list instead of a cached one.
-5. Commit and push; GitHub Pages updates in about a minute.
+4. Optional, for the ring of videos at the top: pick 2–3 moments, add them as `scenes: [s1, s2, s3]` (seconds) and cut a
+   3-second vertical preview for each, numbered from 1:
+   `ffmpeg -ss <s> -i videos/<id>.mp4 -t 3 -an -vf "scale=360:640,fps=30" -c:v libx264 -crf 29 -pix_fmt yuv420p -movflags +faststart previews/<id>-1.mp4`
+   `ffmpeg -ss <s> -i videos/<id>.mp4 -frames:v 1 -vf scale=360:640 -q:v 5 previews/<id>-1.jpg`
+   For a horizontal video, put `crop=ih*9/16:ih,` in front of `scale=360:640`. Without `scenes`, the video still gets a card
+   on the ring, playing its own file.
+5. In `index.html`, bump the number in `videos.js?v=…` so browsers fetch the new list instead of a cached one.
+6. Commit and push; GitHub Pages updates in about a minute.
 
 ## Contact
 `window.CONTACT` in `videos.js`: `email`, and `whatsapp` (digits only, international format). An empty value hides that button.
+
+## The hero
+A ring of the videos where the loader and the hero are the same 3D scene: the cards are dealt round a ring on a white
+page while a counter reads what has really loaded, then the camera moves inside the ring and the page clears onto a
+strip of manga panels with the wisdom of Miyamoto Musashi (his own words, from the Dokkōdō and the Gorin no Sho, 1645;
+the drawings are original). Drag, swipe or scroll to turn it: scrolling down sends the cards right, up sends them left.
+Click a card to play that video from the scene it shows. Escape, Tab or the Skip button end the entrance at once; with
+reduced motion, or on a link to one video (`#video-id`), there is no entrance.
+
+To change it: edit `hero/src/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
+bump `deal-hero.js?v=…` and `deal-hero.css?v=…` in `index.html`. `hero/src/pose.ts` places every card and is unit
+tested in `hero/src/pose.test.ts`.

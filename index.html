@@ -10,7 +10,18 @@
 <meta property="og:image" content="thumbs/duo-chocolate.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E6%AD%A6&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="hero-assets/musashi-panels.webp">
+<link rel="stylesheet" href="hero-assets/deal-hero.css?v=1">
+<script>
+  // the reel ring's entrance owns the first seconds, unless motion is reduced or the link points at one video
+  if (!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) && (location.hash.length < 2 || location.hash === "#top")) {
+    document.documentElement.classList.add("deal-entering");
+    // if the hero's script never arrives, give the page back
+    setTimeout(function () { if (!document.querySelector(".dh")) document.documentElement.classList.remove("deal-entering"); }, 8000);
+  }
+</script>
 <style>
   :root {
     --bg: #0d0b10; --panel: #17141c; --line: #2a2531; --text: #f4f0f7; --muted: #a39cab;
@@ -22,11 +33,20 @@
   a { color: inherit; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
 
-  header { position: relative; overflow: hidden; padding: 72px 0 48px; }
-  header::before { content: ""; position: absolute; inset: -40% -10% auto; height: 520px; pointer-events: none;
-    background: radial-gradient(40% 50% at 25% 50%, rgba(200,107,255,.22), transparent 70%),
-                radial-gradient(35% 45% at 80% 40%, rgba(255,204,77,.16), transparent 70%); }
-  .hero { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  /* top bar: the wordmark the loader's brand word lands on, and the contact buttons */
+  .topbar { position: fixed; z-index: 30; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px clamp(16px, 4vw, 40px); }
+  .topbar::before { content: ""; position: absolute; inset: 0 0 -24px; z-index: -1; pointer-events: none; transition: opacity .3s;
+    background: linear-gradient(rgba(13,11,16,.86), rgba(13,11,16,0)); }
+  .wordmark { font-weight: 700; font-size: 19px; line-height: 1; letter-spacing: -.02em; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .tb-right { display: flex; align-items: center; gap: 10px; }
+  .tb-link { font-size: 14px; color: var(--muted); text-decoration: none; padding: 8px 6px; }
+  .tb-link:hover { color: var(--text); }
+  .topbar .contact { flex-wrap: nowrap; }
+  .topbar .btn { padding: 9px 14px; font-size: 14px; }
+  .topbar.solid::before { inset: 0; background: rgba(13,11,16,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  #videos, #contact-box { scroll-margin-top: 80px; }
+  #deal:empty { height: 0; }
   .nick { margin: 0 0 6px; font-size: 14px; letter-spacing: .25em; text-transform: uppercase; color: var(--accent); }
   h1 { margin: 0; font-size: clamp(44px, 9vw, 96px); line-height: .95; letter-spacing: -.03em; }
   .lead { margin: 14px 0 0; color: var(--muted); font-size: 18px; }
@@ -118,10 +138,10 @@
 
   /* phones: two columns of cards, compact text, full-width contact */
   @media (max-width: 640px) {
-    header { padding: 44px 0 28px; }
     .lead { font-size: 16px; }
-    .contact { width: 100%; }
-    .contact .btn { flex: 1 1 auto; justify-content: center; }
+    .topbar .contact { width: auto; }
+    .topbar .btn { padding: 9px; }
+    .topbar .btn .t, .tb-link { display: none; }
     .grid { grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 40px; }
     .grid.wide { grid-template-columns: 1fr; }
     .filter { font-size: 13px; padding: 7px 12px; }
@@ -147,18 +167,15 @@
 </style>
 </head>
 <body>
-<header id="top">
-  <div class="wrap hero">
-    <div>
-      <p class="nick">Chaker Red</p>
-      <h1>Chaker<br>Redjil</h1>
-      <p class="lead">Ads, promos and motion design — watch them below.</p>
-    </div>
-    <div class="contact" id="contact"></div>
-  </div>
-</header>
+<nav class="topbar" aria-label="Site">
+  <a class="wordmark" href="#top" data-wordmark>Chaker Red</a>
+  <div class="tb-right"><a class="tb-link" href="#videos">Videos</a><a class="tb-link" href="#contact-box">Contact</a><div class="contact" id="contact"></div></div>
+</nav>
 
-<main class="wrap">
+<!-- the hero: a ring of the videos below, drawn by hero-assets/deal-hero.js (source in hero/) -->
+<div id="deal"></div>
+
+<main class="wrap" id="videos">
   <div class="bar"><h2>Videos</h2><span id="count"></span></div>
   <div class="filters" id="filters" role="group" aria-label="Filter by format"></div>
   <div id="groups"></div>
@@ -166,7 +183,7 @@
 
 <section class="cta">
   <div class="wrap">
-    <div class="cta-box">
+    <div class="cta-box" id="contact-box">
       <p class="nick">Contact</p>
       <h2>Let's make your next video</h2>
       <p class="lead">Ads, promos and motion design. Send me a message.</p>
@@ -188,7 +205,7 @@
 </div>
 <div class="toast" id="toast">Link copied</div>
 
-<script src="videos.js?v=5"></script>
+<script src="videos.js?v=6"></script>
 <script>
   const V = window.VIDEOS, CT = window.CONTACT || {};
   const $ = (id) => document.getElementById(id);
@@ -201,8 +218,8 @@
 
   // contact
   const links = [];
-  if (CT.email) links.push(`<a class="btn primary" href="mailto:${CT.email}">${ICON.mail}${CT.email}</a>`);
-  if (CT.whatsapp) links.push(`<a class="btn" href="https://wa.me/${CT.whatsapp}" target="_blank" rel="noopener">${ICON.wa}WhatsApp</a>`);
+  if (CT.email) links.push(`<a class="btn primary" href="mailto:${CT.email}" aria-label="Email ${CT.email}">${ICON.mail}<span class="t">Email</span></a>`);
+  if (CT.whatsapp) links.push(`<a class="btn" href="https://wa.me/${CT.whatsapp}" target="_blank" rel="noopener" aria-label="WhatsApp">${ICON.wa}<span class="t">WhatsApp</span></a>`);
   $("contact").innerHTML = links.join("");
   const big = [];
   if (CT.email) big.push(`<a class="cta-link" href="mailto:${CT.email}"><span class="ic">${ICON.mail}</span><span><b>Email</b><small>${CT.email}</small></span></a>`);
@@ -293,9 +310,9 @@
 
   // player
   const P = $("player"), PV = $("pv");
-  const open = (i, push = true) => {
+  const open = (i, push = true, at = 0) => {
     const v = V[i];
-    PV.src = v.file; PV.poster = v.thumb; $("ptitle").textContent = v.title;
+    PV.src = v.file + (at > 0 ? `#t=${at}` : ""); PV.poster = v.thumb; $("ptitle").textContent = v.title;
     PV.classList.toggle("wide", ratioOf(v) === "16:9");
     P.classList.add("open"); document.body.style.overflow = "hidden";
     PV.play().catch(() => {});
@@ -314,6 +331,14 @@
       });
     }
   });
+  // the top bar turns solid once the hero is behind it
+  const bar = document.querySelector(".topbar"), deal = $("deal");
+  const barState = () => bar.classList.toggle("solid", deal.getBoundingClientRect().bottom < 90);
+  addEventListener("scroll", barState, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(barState).observe(deal); else barState();
+
+  // the hero's cards open a video at the scene they show
+  window.openVideo = (id, at = 0) => { const i = V.findIndex((v) => v.id === id); if (i >= 0) open(i, true, at); };
   $("close").onclick = close;
   P.addEventListener("click", (e) => { if (e.target === P) close(); });
   addEventListener("keydown", (e) => { if (e.key === "Escape" && P.classList.contains("open")) close(); });
@@ -329,5 +354,6 @@
   fromHash();
   addEventListener("hashchange", fromHash);
 </script>
+<script src="hero-assets/deal-hero.js?v=1"></script>
 </body>
 </html>
