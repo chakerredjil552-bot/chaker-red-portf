@@ -33,8 +33,10 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 ## The hero
 A ring of the videos where the loader and the hero are the same 3D scene: the cards are dealt round a ring on a white
 page while a counter reads what has really loaded, then the camera moves inside the ring and the page clears onto a
-looping Musashi animation (`hero-assets/musashi-bg.mp4`, from @rooketwrld on TikTok, credited on the page). Drag, swipe or
-scroll to turn it: the whole page is one full turn, scrolling down sends the cards right, up sends them left.
+looping black-and-white animation (`hero-assets/bg-run.mp4`, upscaled to 1920 wide, with a reversed copy
+`bg-run-rev.mp4`). The page never scrolls: the wheel, a drag or swipe either way, or the arrow keys turn the ring with no
+end. Down sends the cards right and the backdrop runs forward; up sends them left and it runs backward, faster the faster
+you turn.
 `hero/art/` still draws an alternative backdrop of original Musashi manga panels (`hero-assets/musashi-panels.webp`).
 Click a card to play that video from the scene it shows. The page shows only the hero: the video grid, the contact box and the footer are hidden in `index.html` (one CSS line, `main#videos, .cta, footer { display: none; }`), and shared `#video-id` links still open their video. Escape, Tab or the Skip button end the entrance at once; with
 reduced motion, or on a link to one video (`#video-id`), there is no entrance.

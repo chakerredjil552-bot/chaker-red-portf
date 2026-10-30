@@ -7,8 +7,9 @@ import type { Reel } from "./reels.ts";
 const SPIN = -3.4;
 /** At most this many previews play at once: the cards facing the camera, nearest the centre first. */
 const MAX_PLAY = 7;
-/** Scrolling the page turns the ring: down sends the cards right, up sends them left. The whole page is one full turn. */
-const SCROLL_TURNS = 1;
+/** The wheel, a swipe or the keys turn the ring, endlessly either way: down sends the cards right, up sends them left. Degrees per pixel. */
+const WHEEL_TURN = 0.12;
+const KEY_STEP: Record<string, number> = { ArrowDown: -15, ArrowRight: -15, PageDown: -60, " ": -60, ArrowUp: 15, ArrowLeft: 15, PageUp: 60 };
 /** The backdrop pans with the ring, slower than the cards on the far wall (about a third), px per degree at fit 1. */
 const SKY_PAN = 2.2;
 
@@ -30,11 +31,12 @@ interface WallProps {
   section: RefObject<HTMLElement | null>;
   playLabel: string;
   sky?: RefObject<HTMLElement | null>; // the backdrop strip, panned with the ring
+  onTurn?: (degPerSecond: number) => void; // how fast the ring turns, every frame
 }
 
 interface Written { yaw: number; y: number; d: number; o: number; vis: boolean; play: boolean }
 
-export function Wall({ reels, formation, expansion, locked, reduced, preload, onAsset, onOpen, section, playLabel, sky }: WallProps) {
+export function Wall({ reels, formation, expansion, locked, reduced, preload, onAsset, onOpen, section, playLabel, sky, onTurn }: WallProps) {
   const n = reels.length;
   const stage = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLDivElement>(null);
@@ -51,14 +53,14 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
 
   const written = useRef<Written[]>(Array.from({ length: SLOTS }, () => ({ yaw: NaN, y: NaN, d: NaN, o: NaN, vis: true, play: false })));
   const shared = useRef({ r: NaN, s: NaN, tilt: NaN, roll: NaN, persp: NaN });
-  const view = useRef({ w: 1, h: 1, fit: fitFor(1440, 900), strip: 0, turn: 0 });
+  const view = useRef({ w: 1, h: 1, fit: fitFor(1440, 900), strip: 0 });
   const skyAt = useRef(NaN);
   const pointer = useRef({ x: -1, y: -1, on: false });
   const hover = useRef(-1);
   const frame = useRef(0);
   const inView = useRef(true);
-  const lastScroll = useRef(-1);
-  const drag = useRef<null | { id: number; x0: number; y0: number; a0: number; moved: boolean; lx: number; lt: number; v: number }>(null);
+  const turning = useRef({ at: NaN, v: 0 });
+  const drag = useRef<null | { id: number; x0: number; y0: number; a0: number; moved: boolean; lx: number; lt: number; v: number; axis: 0 | 1 | 2 }>(null);
   const swallowClick = useRef(false);
   const lockedRef = useRef(locked);
   lockedRef.current = locked;
@@ -66,8 +68,7 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
   useLayoutEffect(() => {
     const size = () => {
       const w = window.innerWidth, h = window.innerHeight;
-      const range = document.documentElement.scrollHeight - h;
-      view.current = { w, h, fit: fitFor(w, h), strip: sky?.current?.querySelector("img")?.offsetWidth ?? 0, turn: range > 0 ? (360 * SCROLL_TURNS) / range : 0 };
+      view.current = { w, h, fit: fitFor(w, h), strip: sky?.current?.querySelector("img")?.offsetWidth ?? 0 };
     };
     size();
     window.addEventListener("resize", size);
@@ -104,7 +105,6 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
     const box = stageEl.getBoundingClientRect();
     // gone, or nearly gone, from the screen: rest, and stop every preview
     if (!inView.current || Math.min(box.bottom, vh) - Math.max(box.top, 0) < vh * 0.3) {
-      lastScroll.current = -1;
       written.current.forEach((w, s) => { if (w.play) { w.play = false; videos.current[s]?.pause(); } });
       return;
     }
@@ -114,11 +114,11 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
       const gain = Math.min(1, ex * 1.4) * (hover.current >= 0 ? 0.25 : 1);
       if (gain > 0) target.set(target.get() + SPIN * gain * Math.min(delta, 64) / 1000);
     }
-    // the page's scroll turns the ring, whichever way it comes: wheel, touch, keys or the scrollbar
-    const sy = window.scrollY;
-    if (lastScroll.current >= 0 && sy !== lastScroll.current && !lockedRef.current) target.set(target.get() - (sy - lastScroll.current) * view.current.turn);
-    lastScroll.current = sy;
     const R = angle.get();
+    const tv = turning.current;
+    if (!Number.isNaN(tv.at) && delta > 0) tv.v += (((R - tv.at) / delta) * 1000 - tv.v) * 0.2;
+    tv.at = R;
+    onTurn?.(tv.v);
     const fitNow = fit.a + (fit.b - fit.a) * ex;
     const scene = sceneAt(ex, fitNow);
     const strip = view.current.strip, skyEl = sky?.current;
@@ -194,29 +194,32 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
     }
   });
 
-  // input: drag and swipe sideways, wheel; vertical swipes stay with the page
+  // input: drag or swipe either way, the wheel, the keys; the ring has no ends
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
+    const playerOpen = () => !!document.querySelector(".player.open");
     const down = (e: PointerEvent) => {
       if (lockedRef.current || (e.pointerType === "mouse" && e.button !== 0)) return;
-      drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, a0: target.get(), moved: false, lx: e.clientX, lt: e.timeStamp, v: 0 };
+      drag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, a0: target.get(), moved: false, lx: 0, lt: e.timeStamp, v: 0, axis: 0 };
     };
+    // sideways: the cards follow the finger; up and down: like scrolling, a swipe up sends them right
+    const along = (d: NonNullable<typeof drag.current>, x: number, y: number) => (d.axis === 1 ? x - d.x0 : -(y - d.y0) * 0.8);
     const move = (e: PointerEvent) => {
       const d = drag.current;
       if (!d || e.pointerId !== d.id) return;
-      const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
       if (!d.moved) {
-        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag.current = null; return; }
-        if (Math.abs(dx) < 6) return;
+        const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
+        d.axis = Math.abs(dx) >= Math.abs(dy) ? 1 : 2;
         d.moved = true;
         el.setPointerCapture(e.pointerId);
         el.classList.add("is-dragging");
       }
-      const dt = Math.max(1, e.timeStamp - d.lt);
-      d.v = d.v * 0.6 + ((e.clientX - d.lx) / dt) * 0.4;
-      d.lx = e.clientX; d.lt = e.timeStamp;
-      target.set(d.a0 - dx * degPerPx());
+      const p = along(d, e.clientX, e.clientY), dt = Math.max(1, e.timeStamp - d.lt);
+      d.v = d.v * 0.6 + ((p - d.lx) / dt) * 0.4;
+      d.lx = p; d.lt = e.timeStamp;
+      target.set(d.a0 - p * degPerPx());
     };
     const up = (e: PointerEvent) => {
       const d = drag.current;
@@ -230,25 +233,34 @@ export function Wall({ reels, formation, expansion, locked, reduced, preload, on
       setTimeout(() => { swallowClick.current = false; }, 0);
     };
     const wheel = (e: WheelEvent) => {
+      if (playerOpen()) return;
+      e.preventDefault();
       if (lockedRef.current) return;
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        e.preventDefault();
-        target.set(target.get() + e.deltaX * degPerPx() * 0.6);
-      }
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+      target.set(target.get() + (e.deltaX * 0.6 - e.deltaY) * unit * WHEEL_TURN);
+    };
+    const key = (e: KeyboardEvent) => {
+      const step = KEY_STEP[e.key];
+      if (step === undefined || lockedRef.current || playerOpen() || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === " " && (e.target as HTMLElement | null)?.closest?.("a, button")) return;
+      e.preventDefault();
+      target.set(target.get() + step);
     };
     const click = (e: MouseEvent) => { if (swallowClick.current) { e.preventDefault(); e.stopPropagation(); } };
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
     el.addEventListener("pointercancel", up);
-    el.addEventListener("wheel", wheel, { passive: false });
+    window.addEventListener("wheel", wheel, { passive: false });
+    window.addEventListener("keydown", key);
     el.addEventListener("click", click, true);
     return () => {
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
       el.removeEventListener("pointercancel", up);
-      el.removeEventListener("wheel", wheel);
+      window.removeEventListener("wheel", wheel);
+      window.removeEventListener("keydown", key);
       el.removeEventListener("click", click, true);
     };
   }, [target]);

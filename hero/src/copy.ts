@@ -3,7 +3,7 @@ export const COPY = {
   brand: "Chaker Red",
   nick: "Video portfolio",
   name: "Chaker Redjil",
-  lead: "Ads, promos and motion design. Drag or scroll to turn the ring, tap a video to watch it.",
+  lead: "Ads, promos and motion design. Scroll, drag or swipe any way, the ring never ends. Tap a video to watch it.",
   email: "Email me",
   whatsapp: "WhatsApp",
   skip: "Skip intro",
@@ -11,7 +11,7 @@ export const COPY = {
   loading: "Loading Reels",
   play: "Play",
   tagLeft: "Ads · Promos · Motion design",
-  tagRight: "Background: @rooketwrld on TikTok",
+  tagRight: "Scroll any way · it never ends",
 };
 
 declare global {

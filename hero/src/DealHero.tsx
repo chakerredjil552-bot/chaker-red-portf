@@ -11,7 +11,47 @@ const EXPANSION_S = 1.9;
 const EXPANSION_EASE = [0.5, 0, 0.15, 1] as const;
 /** If the network never delivers, the reveal goes ahead this long after the deal has finished. */
 const PATIENCE_MS = 4500;
-const BACKDROP = "hero-assets/musashi-bg.mp4", BACKDROP_POSTER = "hero-assets/musashi-bg.jpg";
+const BACKDROP = "hero-assets/bg-run.mp4", BACKDROP_REVERSED = "hero-assets/bg-run-rev.mp4", BACKDROP_POSTER = "hero-assets/bg-run.jpg";
+
+/**
+ * The backdrop runs with the ring: forward while the cards drift or are sent right, backward while they are sent left,
+ * faster the faster they turn. Browsers cannot play a video backwards, so a reversed copy takes over at the mirrored
+ * moment; both decode natively, so nothing is drawn by hand.
+ */
+function useBackdrop(reduced: boolean) {
+  const fwd = useRef<HTMLVideoElement>(null), rev = useRef<HTMLVideoElement>(null);
+  const st = useRef({ dir: 1, switching: false, rate: 1 });
+  useEffect(() => {
+    const f = fwd.current, r = rev.current;
+    if (!f || !r || reduced) return;
+    // the reversed copy loads once the forward one is in, so the start stays light
+    const later = () => { r.preload = "auto"; r.load(); };
+    if (f.readyState >= 4) later(); else f.addEventListener("canplaythrough", later, { once: true });
+    return () => f.removeEventListener("canplaythrough", later);
+  }, [reduced]);
+  const onTurn = useCallback((v: number) => {
+    const f = fwd.current, r = rev.current, s = st.current;
+    if (!f || !r || reduced) return;
+    // the idle spin is about -3.4 deg/s: that is running forward at normal speed
+    const want = v > 5 ? -1 : v < -1 ? 1 : s.dir;
+    const from = s.dir === 1 ? f : r, to = s.dir === 1 ? r : f;
+    if (want !== s.dir && !s.switching && to.readyState >= 2 && from.duration) {
+      s.switching = true;
+      const t = from.duration - from.currentTime;
+      to.currentTime = Math.max(0, Math.min(to.duration - 0.05, t));
+      to.playbackRate = from.playbackRate;
+      const show = () => {
+        to.classList.add("on"); from.classList.remove("on"); from.pause();
+        s.dir = want; s.switching = false;
+      };
+      to.play().then(() => requestAnimationFrame(show)).catch(() => { s.switching = false; });
+    }
+    const active = s.dir === 1 ? f : r;
+    const rate = Math.round(Math.max(1, Math.min(3, Math.abs(v) / 14)) * 10) / 10;
+    if (rate !== s.rate) { s.rate = rate; active.playbackRate = rate; }
+  }, [reduced]);
+  return { fwd, rev, onTurn };
+}
 
 const html = document.documentElement;
 const SCROLL_KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
@@ -55,6 +95,7 @@ export function DealHero() {
   const [late, setLate] = useState(false);
   const pin = useRef<HTMLDivElement>(null);
   const runs = useRef<AnimationPlaybackControls[]>([]);
+  const backdrop = useBackdrop(reduced);
   const started = useRef(instant);
 
   // real progress: which of the front covers and previews have arrived
@@ -160,12 +201,13 @@ export function DealHero() {
       <div ref={pin} id="top" className="dh-pin">
         <section className="dh" aria-label={COPY.name}>
           <m.div className="dh-sky" style={{ scale: skyScale }} aria-hidden="true">
-            <video className="dh-bgvid" src={BACKDROP} poster={BACKDROP_POSTER} muted loop playsInline autoPlay={!reduced} preload="auto" disablePictureInPicture tabIndex={-1} />
+            <video ref={backdrop.fwd} className="dh-bgvid on" src={BACKDROP} poster={BACKDROP_POSTER} muted loop playsInline autoPlay={!reduced} preload="auto" disablePictureInPicture tabIndex={-1} />
+            <video ref={backdrop.rev} className="dh-bgvid" src={BACKDROP_REVERSED} muted loop playsInline preload="none" disablePictureInPicture tabIndex={-1} />
           </m.div>
           <m.div className="dh-white" style={{ opacity: white }} aria-hidden="true" />
           <Wall
             reels={REELS} formation={formation} expansion={expansion} locked={entering} reduced={reduced}
-            preload={preload} onAsset={onAsset} onOpen={play} section={pin} playLabel={COPY.play}
+            preload={preload} onAsset={onAsset} onOpen={play} section={pin} playLabel={COPY.play} onTurn={backdrop.onTurn}
           />
           <m.div className="dh-shade" style={{ opacity: shade }} aria-hidden="true" />
 
