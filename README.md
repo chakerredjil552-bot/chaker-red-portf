@@ -33,7 +33,7 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 ## The hero
 A ring of the videos where the loader and the hero are the same 3D scene: the cards are dealt round a ring on a white
 page while a counter reads what has really loaded, then the camera moves inside the ring and the page clears onto a
-looping black-and-white animation (`hero-assets/bg-run.mp4`, upscaled to 1920 wide, with a reversed copy
+looping black-and-white animation (`hero-assets/bg-run.mp4`, upscaled 2x with Real-ESRGAN (realesr-animevideov3) to 2092x1092, with a reversed copy
 `bg-run-rev.mp4`). The page never scrolls: the wheel, a drag or swipe either way, or the arrow keys turn the ring with no
 end. Down sends the cards right and the backdrop runs forward; up sends them left and it runs backward, faster the faster
 you turn.
