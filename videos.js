@@ -6,6 +6,15 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "bushra-school-timetable",
+    title: "Bushra's School — weekly timetable promo",
+    tag: "Promo · Motion design",
+    duration: "0:32",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/bushra-school-timetable.mp4",
+    thumb: "thumbs/bushra-school-timetable.jpg",
+  },
+  {
     id: "wasfati-ad",
     title: "Wasfati — وصفتي · app launch ad",
     tag: "Ad · Motion design",
