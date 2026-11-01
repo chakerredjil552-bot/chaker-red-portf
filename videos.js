@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "claude-code-self-ad",
+    title: "Claude Code — made its own ad",
+    tag: "Reel · Code-generated anime edit",
+    duration: "0:34",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/claude-code-self-ad.mp4",
+    thumb: "thumbs/claude-code-self-ad.jpg",
+    scenes: [5.4, 11.0, 18.4], // seconds where the hero's preview clips start: previews/claude-code-self-ad-1.mp4 …
+  },
+  {
     id: "bushra-school-timetable",
     title: "Bushra's School — weekly timetable promo",
     tag: "Promo · Motion design",
