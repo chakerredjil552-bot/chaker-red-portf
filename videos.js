@@ -9,11 +9,11 @@ window.VIDEOS = [
     id: "claude-code-self-ad",
     title: "Claude Code — made its own ad",
     tag: "Reel · Code-generated anime edit",
-    duration: "0:34",
+    duration: "0:39",
     socialLikes: 0, // real likes this video got on social media; site likes add on top
-    file: "videos/claude-code-self-ad.mp4?v=2",
+    file: "videos/claude-code-self-ad.mp4?v=3",
     thumb: "thumbs/claude-code-self-ad.jpg",
-    scenes: [5.4, 10.2, 18.4], // seconds where the hero's preview clips start: previews/claude-code-self-ad-1.mp4 …
+    scenes: [6.9, 12.4, 23.0], // seconds where the hero's preview clips start: previews/claude-code-self-ad-1.mp4 …
   },
   {
     id: "bushra-school-timetable",
