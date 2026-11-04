@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "blank-short-film",
+    title: "BLANK — a short film",
+    tag: "Short film · Code-generated 3D & animation",
+    duration: "0:30",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/blank-short-film.mp4",
+    thumb: "thumbs/blank-short-film.jpg",
+    scenes: [9.0, 15.0, 19.0], // seconds where the hero's preview clips start: previews/blank-short-film-1.mp4 …
+  },
+  {
     id: "claude-code-self-ad",
     title: "Claude Code — made its own ad",
     tag: "Reel · Code-generated anime edit",
