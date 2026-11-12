@@ -100,12 +100,12 @@ window.VIDEOS = [
   {
     id: "duo-chocolate",
     title: "DUO Chocolate — animated ad",
-    tag: "Ad · Character animation",
+    tag: "Ad · Character animation + AI (Higgsfield)",
     duration: "0:20",
     socialLikes: 210, // real likes this video got on social media; site likes add on top
-    file: "videos/duo-chocolate.mp4",
+    file: "videos/duo-chocolate.mp4?v=2",
     thumb: "thumbs/duo-chocolate.jpg",
-    scenes: [0.05, 7.45, 13], // seconds where the hero's preview clips start: previews/duo-chocolate-1.mp4 …
+    scenes: [3.4, 8.6, 13], // seconds where the hero's preview clips start: previews/duo-chocolate-1.mp4 …
   },
   {
     id: "bushra-school-website",
