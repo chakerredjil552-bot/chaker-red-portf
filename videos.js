@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "rdj-maquette-reel",
+    title: "RDJ PUB Design — maquette Reel ad",
+    tag: "Ad · Motion design & real footage",
+    duration: "0:43",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/rdj-maquette-reel.mp4",
+    thumb: "thumbs/rdj-maquette-reel.jpg",
+    scenes: [3.8, 27.0, 38.4], // seconds where the hero's preview clips start: previews/rdj-maquette-reel-1.mp4 …
+  },
+  {
     id: "blank-short-film",
     title: "BLANK — a short film",
     tag: "Short film · Code-generated 3D & animation",
