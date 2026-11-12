@@ -6,6 +6,17 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "texture-words",
+    title: "TEXTURE — words you can feel",
+    tag: "Loop · Kinetic typography & sound design",
+    ratio: "16:9",
+    duration: "0:26",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/texture-words.mp4",
+    thumb: "thumbs/texture-words.jpg",
+    scenes: [5.7, 13.7, 17.4], // seconds where the hero's preview clips start: previews/texture-words-1.mp4 …
+  },
+  {
     id: "rdj-maquette-reel",
     title: "RDJ PUB Design — maquette Reel ad",
     tag: "Ad · Motion design & real footage",
