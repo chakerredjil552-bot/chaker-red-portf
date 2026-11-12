@@ -11,7 +11,7 @@ window.VIDEOS = [
     tag: "Loop · Kinetic typography & sound design",
     ratio: "16:9",
     duration: "0:26",
-    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    socialLikes: 587, // real likes this video got on social media; site likes add on top
     file: "videos/texture-words.mp4",
     thumb: "thumbs/texture-words.jpg",
     scenes: [5.7, 13.7, 17.4], // seconds where the hero's preview clips start: previews/texture-words-1.mp4 …
@@ -21,7 +21,7 @@ window.VIDEOS = [
     title: "RDJ PUB Design — maquette Reel ad",
     tag: "Ad · Motion design & real footage",
     duration: "0:43",
-    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    socialLikes: 2354, // real likes this video got on social media; site likes add on top
     file: "videos/rdj-maquette-reel.mp4",
     thumb: "thumbs/rdj-maquette-reel.jpg",
     scenes: [3.8, 27.0, 38.4], // seconds where the hero's preview clips start: previews/rdj-maquette-reel-1.mp4 …
@@ -31,7 +31,7 @@ window.VIDEOS = [
     title: "BLANK — a short film",
     tag: "Short film · Code-generated 3D & animation",
     duration: "0:30",
-    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    socialLikes: 650, // real likes this video got on social media; site likes add on top
     file: "videos/blank-short-film.mp4",
     thumb: "thumbs/blank-short-film.jpg",
     scenes: [9.0, 15.0, 19.0], // seconds where the hero's preview clips start: previews/blank-short-film-1.mp4 …
@@ -41,7 +41,7 @@ window.VIDEOS = [
     title: "Claude Code — made its own ad",
     tag: "Reel · Code-generated anime edit",
     duration: "0:39",
-    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    socialLikes: 877, // real likes this video got on social media; site likes add on top
     file: "videos/claude-code-self-ad.mp4?v=3",
     thumb: "thumbs/claude-code-self-ad.jpg",
     scenes: [6.9, 12.4, 23.0], // seconds where the hero's preview clips start: previews/claude-code-self-ad-1.mp4 …
