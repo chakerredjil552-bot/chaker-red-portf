@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "mohtal-ad",
+    title: "شكون المحتال؟ — imposter game app ad",
+    tag: "Ad · Motion design & kinetic captions",
+    duration: "0:26",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/mohtal-ad.mp4",
+    thumb: "thumbs/mohtal-ad.jpg",
+    scenes: [5.9, 8.6, 13.4], // seconds where the hero's preview clips start: previews/mohtal-ad-1.mp4 …
+  },
+  {
     id: "texture-words",
     title: "TEXTURE — words you can feel",
     tag: "Loop · Kinetic typography & sound design",
