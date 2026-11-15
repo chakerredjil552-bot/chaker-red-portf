@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "favorite-boy-lyric-reel",
+    title: "Favorite Boy — typed-letter lyric reel",
+    tag: "Reel · 3D kinetic typography & sound design",
+    duration: "0:33",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/favorite-boy-lyric-reel.mp4",
+    thumb: "thumbs/favorite-boy-lyric-reel.jpg",
+    scenes: [6.0, 20.9, 25.6], // seconds where the hero's preview clips start: previews/favorite-boy-lyric-reel-1.mp4 …
+  },
+  {
     id: "mohtal-ad",
     title: "شكون المحتال؟ — imposter game app ad",
     tag: "Ad · Motion design & kinetic captions",
