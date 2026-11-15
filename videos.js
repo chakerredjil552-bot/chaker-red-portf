@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "porsche-gt2rs-reel",
+    title: "Porsche 911 GT2 RS — sunlit detail reel",
+    tag: "Reel · 3D car film & sound design",
+    duration: "0:13",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/porsche-gt2rs-reel.mp4",
+    thumb: "thumbs/porsche-gt2rs-reel.jpg",
+    scenes: [2.4, 3.9, 12.0], // seconds where the hero's preview clips start: previews/porsche-gt2rs-reel-1.mp4 …
+  },
+  {
     id: "favorite-boy-lyric-reel",
     title: "Favorite Boy — typed-letter lyric reel",
     tag: "Reel · 3D kinetic typography & sound design",
