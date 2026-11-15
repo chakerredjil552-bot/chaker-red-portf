@@ -11,9 +11,9 @@ window.VIDEOS = [
     tag: "Reel · 3D car film & sound design",
     duration: "0:13",
     socialLikes: 0, // real likes this video got on social media; site likes add on top
-    file: "videos/porsche-gt2rs-reel.mp4?v=3",
-    thumb: "thumbs/porsche-gt2rs-reel.jpg?v=2",
-    scenes: [2.4, 3.9, 12.0], // seconds where the hero's preview clips start: previews/porsche-gt2rs-reel-1.mp4 …
+    file: "videos/porsche-gt2rs-reel.mp4?v=4",
+    thumb: "thumbs/porsche-gt2rs-reel.jpg?v=3",
+    scenes: [2.4, 3.9, 11.0], // seconds where the hero's preview clips start: previews/porsche-gt2rs-reel-1.mp4 …
   },
   {
     id: "favorite-boy-lyric-reel",
