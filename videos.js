@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "bushra-school-awareness",
+    title: "وين راهم ولادنا؟ — school awareness reel",
+    tag: "Awareness film · Arabic kinetic typography & motion design",
+    duration: "0:47",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/bushra-school-awareness.mp4",
+    thumb: "thumbs/bushra-school-awareness.jpg",
+    scenes: [0.9, 6.5, 34.5], // seconds where the hero's preview clips start: previews/bushra-school-awareness-1.mp4 …
+  },
+  {
     id: "emir-abdelkader",
     title: "Emir Abdelkader — the man France fought",
     tag: "Documentary short · Kinetic typography & archival motion",
