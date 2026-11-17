@@ -6,6 +6,16 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "emir-abdelkader",
+    title: "Emir Abdelkader — the man France fought",
+    tag: "Documentary short · Kinetic typography & archival motion",
+    duration: "1:30",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/emir-abdelkader.mp4",
+    thumb: "thumbs/emir-abdelkader.jpg",
+    scenes: [17.5, 28, 67.5], // seconds where the hero's preview clips start: previews/emir-abdelkader-1.mp4 …
+  },
+  {
     id: "porsche-gt2rs-reel",
     title: "Porsche 911 GT2 RS — sunlit detail reel",
     tag: "Reel · 3D car film & sound design",
