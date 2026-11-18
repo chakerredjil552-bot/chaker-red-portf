@@ -11,8 +11,8 @@ window.VIDEOS = [
     tag: "Awareness film · Arabic kinetic typography & motion design",
     duration: "0:48",
     socialLikes: 0, // real likes this video got on social media; site likes add on top
-    file: "videos/bushra-school-awareness.mp4?v=2",
-    thumb: "thumbs/bushra-school-awareness.jpg?v=2",
+    file: "videos/bushra-school-awareness.mp4?v=3",
+    thumb: "thumbs/bushra-school-awareness.jpg?v=3",
     scenes: [2.2, 7.8, 35.8], // seconds where the hero's preview clips start: previews/bushra-school-awareness-1.mp4 …
   },
   {
