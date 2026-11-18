@@ -9,11 +9,11 @@ window.VIDEOS = [
     id: "bushra-school-awareness",
     title: "وين راهم ولادنا؟ — school awareness reel",
     tag: "Awareness film · Arabic kinetic typography & motion design",
-    duration: "0:47",
+    duration: "0:48",
     socialLikes: 0, // real likes this video got on social media; site likes add on top
-    file: "videos/bushra-school-awareness.mp4",
-    thumb: "thumbs/bushra-school-awareness.jpg",
-    scenes: [0.9, 6.5, 34.5], // seconds where the hero's preview clips start: previews/bushra-school-awareness-1.mp4 …
+    file: "videos/bushra-school-awareness.mp4?v=2",
+    thumb: "thumbs/bushra-school-awareness.jpg?v=2",
+    scenes: [2.2, 7.8, 35.8], // seconds where the hero's preview clips start: previews/bushra-school-awareness-1.mp4 …
   },
   {
     id: "emir-abdelkader",
