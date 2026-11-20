@@ -49,9 +49,21 @@ one texture, filled in as the frames load; the first video only loads once the c
 motion the wall stops drifting and the camera follows the scroll at once. Without WebGL the page shows the plain grid
 of videos instead. Shared `#video-id` links still open their video in the player.
 
-The figure is built from simple shapes and shaded as a silhouette lit by the floor; the glow colour of each video is
-taken from its cover.
+**The figure moves with the scroll** (`hero/src/zt/choreo.ts`, `figure.ts`): seen from above he walks across the
+floor while the camera sinks; as it tilts up the camera follows him to the middle of the room, where he turns to the
+wall and reaches up: a screen of the bottom row flares white, comes off the wall and floats forward. For each video he
+walks to a new spot and stands with his back to you, breathing and shifting his weight; on the way out he walks off to
+the right. He has joints (hips, knees, shoulders, elbows, neck): his legs follow how far he really moved, so he walks
+when you scroll, faster when you scroll faster, and settles when you stop; scrolling back plays it all backward. His
+long shadow is the same rig flattened onto the floor along the light.
+
+**The camera** spirals a sixth of a turn on the way down, sways a little as if held by hand (more while it moves) and
+leans in each time a new video comes forward. **The light** (`post.ts`): bright screens bloom, fast moves streak
+toward the centre, colours split slightly at the edges, the corners darken and a fine grain runs over the picture; the
+screens on the wall flicker gently. A slow device lowers its resolution, then drops the glow, to keep moving smoothly.
+The glow colour of each video is taken from its cover.
 
 To change it: edit `hero/src/zt/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
 bump `zoetrope.js?v=…` and `zoetrope.css?v=…` in `index.html`. The words are in `hero/src/zt/ui.ts`; the stages, the
-wall and the camera path (`plan.ts`, `wall.ts`, `cam.ts`) are unit tested in `hero/src/zt/zt.test.ts`.
+wall, the camera path and the figure's path (`plan.ts`, `wall.ts`, `cam.ts`, `choreo.ts`) are unit tested in
+`hero/src/zt/zt.test.ts`.

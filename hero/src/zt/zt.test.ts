@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { marks, planFor, snapPoints, stageAt, stopOf } from "./plan.ts";
 import { WALL, WALL_TOP, angleGap, cellFor, nearestSlot, rowDir, rowTurn, rowY, slotAngle, slotPose } from "./wall.ts";
-import { BOTTOM_Y, roomShot, roomYaw, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
+import { BOTTOM_Y, ROLL, roomShot, roomYaw, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
+import { markAt, sideOf } from "./choreo.ts";
 
 const near = (a: number, b: number, eps = 1e-6, msg?: string) =>
   assert.ok(Math.abs(a - b) <= eps, msg ?? `expected ${a} to be within ${eps} of ${b}`);
@@ -119,4 +120,44 @@ test("in the room the camera stands inside the well, behind the figure, facing t
   }
   const a = rotY([1, 2, 3], 0.7), b = rotY(a, -0.7);
   near(b[0], 1, 1e-9); near(b[1], 2, 1e-9); near(b[2], 3, 1e-9);
+});
+
+test("the figure walks smoothly the whole way: never a jump, always on the floor inside the well", () => {
+  const m = marks(plan);
+  let prev = markAt(stageAt(plan, 0), plan);
+  for (let s = 0.002; s <= m.total; s += 0.002) {
+    const cur = markAt(stageAt(plan, s), plan);
+    const step = Math.hypot(cur.x - prev.x, cur.z - prev.z);
+    assert.ok(step < 0.08, `he jumped ${step.toFixed(3)} at ${s.toFixed(3)}`);
+    assert.ok(Math.hypot(cur.x, cur.z) < WALL.radius - 1.5, `he left the floor at ${s}`);
+    assert.ok(cur.reach >= 0 && cur.reach <= 1);
+    prev = cur;
+  }
+});
+
+test("he reaches up for the first screen, then stands in front of each video, between the camera and the wall", () => {
+  const m = marks(plan);
+  let reached = 0;
+  for (let s = m.land; s < m.room; s += 0.01) reached = Math.max(reached, markAt(stageAt(plan, s), plan).reach);
+  near(reached, 1, 0.02);
+  for (let k = 0; k < plan.count; k++) {
+    const st = stageAt(plan, stopOf(plan, k)), mk = markAt(st, plan), cam = roomShot(roomYaw(k, plan.count), 16 / 9);
+    near(markAt(st, plan).reach, 0);
+    const view = [cam.target[0] - cam.pos[0], cam.target[2] - cam.pos[2]];
+    const toHim = [mk.x - cam.pos[0], mk.z - cam.pos[2]];
+    const len = Math.hypot(view[0], view[1]) * Math.hypot(toHim[0], toHim[1]);
+    assert.ok((view[0] * toHim[0] + view[1] * toHim[1]) / len > 0.97, `video ${k}: he is not in front of the camera`);
+    // facing the wall: his facing points along the camera's view
+    const f = [Math.sin(mk.face), Math.cos(mk.face)];
+    assert.ok((f[0] * view[0] + f[1] * view[1]) / Math.hypot(view[0], view[1]) > 0.99);
+  }
+  assert.equal(sideOf(0), 0);
+});
+
+test("the camera spirals down: screen-up turns by ROLL on the way down, and the room starts there", () => {
+  const m = marks(plan);
+  const top = shotAt(stageAt(plan, m.descent), plan, 16 / 9), bottom = shotAt(stageAt(plan, m.land), plan, 16 / 9);
+  near(Math.atan2(-top.up[0], -top.up[2]), 0, 1e-9);
+  near(Math.atan2(-bottom.up[0], -bottom.up[2]), ROLL, 1e-6);
+  near(roomYaw(0, plan.count), ROLL, 1e-12);
 });

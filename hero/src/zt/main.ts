@@ -7,9 +7,11 @@ import * as THREE from "three";
 import { VIDEOS, firstPicture, isWide, wallPictures } from "./data.ts";
 import { clamp01, lerp, marks, planFor, smoother, snapPoints, stageAt, stopOf, type Stage } from "./plan.ts";
 import { WALL, nearestSlot, rowTurn, slotPose } from "./wall.ts";
-import { rotY, shotAt } from "./cam.ts";
+import { rotY, shotAt, type V3 } from "./cam.ts";
+import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
-import { makeFigure } from "./figure.ts";
+import { makeFigure, pose } from "./figure.ts";
+import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
 
 const html = document.documentElement;
@@ -17,6 +19,14 @@ const host = document.getElementById("deal");
 const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const BG = new THREE.Color("#0c0a0b");
 const BG_END = new THREE.Color("#1d0d11");
+/** The light that throws his long shadow: from high up, behind and to the right, so it falls toward the front left. */
+const LIGHT = new THREE.Vector3(-0.55, -1, 0.42);
+
+/** Shortest signed turn from angle a to angle b, radians. */
+const angleTo = (a: number, b: number) => ((((b - a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+/** Smooth, never-repeating wobble: three sines at odd rates. */
+const wobble = (t: number, a: number, b: number, c: number, o: number) =>
+  Math.sin(t * a + o) * 0.5 + Math.sin(t * b + o * 2.1) * 0.3 + Math.sin(t * c + o * 3.7) * 0.2;
 
 function webgl(): THREE.WebGLRenderer | null {
   try {
@@ -75,8 +85,11 @@ function start() {
   const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize);
   const fog = BG.clone();
   const wall = new Wall(atlas, fog);
-  const figure = makeFigure();
-  scene.add(wall.mesh, makeFloor(), figure);
+  const figure = makeFigure(LIGHT);
+  const floor = makeFloor();
+  const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
+  scene.add(wall.mesh, floor, figure.group);
+  const post = new Post(renderer, phone ? 0.22 : 0.3, phone);
 
   // two video elements: the one on the screen, and the next one, loaded during the swap
   const mkVideo = () => {
@@ -137,6 +150,7 @@ function start() {
     host.style.setProperty("--vh", vh + "px");
     scroller.style.height = `${(m.total + 1) * vh}px`;
     renderer.setSize(innerWidth, innerHeight);
+    post.resize();
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
   };
@@ -176,25 +190,89 @@ function start() {
   const clock = { t: 0 };
   const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), dummy = new THREE.Object3D();
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
+  // the figure: where he is, how far into a stride, which way he faces
+  const start0 = markAt(stage, plan);
+  const fig = { x: start0.x, z: start0.z, walk: 0, phase: 0, face: start0.face, reach: 0 };
+  // the camera's own motion, for the streaks; a push-in each time a new video comes forward
+  const prevPos = new THREE.Vector3(), prevDir = new THREE.Vector3(), dir = new THREE.Vector3();
+  let pushAt = -1e9;
+  // a slow device gives up sharpness first, then the glow, so it keeps moving smoothly
+  const perf = { sum: 0, n: 0, ratio: renderer.getPixelRatio(), glow: true };
 
   const frame = (now: number) => {
     requestAnimationFrame(frame);
-    const dt = Math.min(0.064, (now - last) / 1000);
+    const raw = (now - last) / 1000;
+    const dt = Math.min(0.064, raw);
     last = now;
+    if (!document.hidden && raw < 1) {
+      perf.sum += raw; perf.n++;
+      if (perf.sum > 2.5) {
+        const avg = perf.sum / perf.n;
+        perf.sum = 0; perf.n = 0;
+        if (avg > 1 / 40 && perf.ratio > 1) { perf.ratio = Math.max(1, perf.ratio - 0.25); renderer.setPixelRatio(perf.ratio); resize(); }
+        else if (avg > 1 / 40 && perf.glow) perf.glow = false;
+      }
+    }
     if (!reduced) clock.t += dt;
     const aspect = innerWidth / innerHeight, tall = aspect < 1;
 
     // the scroll, eased: the camera glides, it never snaps
     const s = scrollY / vh;
+    const before = eased;
     eased = reduced ? s : eased + (s - eased) * (1 - Math.exp(-7 * dt));
     if (Math.abs(s - eased) < 1e-4) eased = s;
+    const speed = dt > 0 ? Math.abs(eased - before) / dt : 0; // viewport heights a second
     stage = stageAt(plan, eased);
     const shot = shotAt(stage, plan, aspect);
-    camera.position.set(...shot.pos);
-    camera.up.set(...shot.up);
-    camera.lookAt(...shot.target);
-    if (Math.abs(camera.fov - shot.fov) > 0.01) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
     const yaw = Math.atan2(-(shot.target[0] - shot.pos[0]), -(shot.target[2] - shot.pos[2]));
+
+    // the figure: the scroll says where he is; his legs follow how far he really moved, so he walks when you
+    // scroll, faster when you scroll faster, and settles into standing when you stop
+    const mk = markAt(stage, plan);
+    const dx = mk.x - fig.x, dz = mk.z - fig.z, moved = Math.hypot(dx, dz);
+    fig.x = mk.x; fig.z = mk.z;
+    const pace = dt > 0 ? moved / dt : 0;
+    fig.walk += (Math.min(1, pace / 1.1) - fig.walk) * (1 - Math.exp(-(pace > 0.05 ? 8 : 3) * dt));
+    fig.phase += (Math.min(moved, 0.2) / 1.4) * Math.PI * 2;
+    const facing = pace > 0.15 ? Math.atan2(dx, dz) : mk.face;
+    fig.face += angleTo(fig.face, facing) * (1 - Math.exp(-(pace > 0.15 ? 10 : 4) * dt));
+    fig.reach += (mk.reach - fig.reach) * (1 - Math.exp(-10 * dt));
+    const look = stage.name === "room" ? 0.22 * Math.sin(clock.t * 0.31) + 0.1 * Math.sin(clock.t * 0.17 + 2) : 0;
+    for (const r of [figure.rig, figure.shadow]) {
+      r.root.position.set(fig.x, 0, fig.z);
+      r.root.rotation.y = fig.face;
+      pose(r, { phase: fig.phase, walk: reduced ? 0 : fig.walk, reach: fig.reach, time: clock.t, look });
+    }
+    floorU.uFig.value.set(fig.x, fig.z);
+
+    // the camera: it follows him as he walks in and out, sways like it is held by hand (more when it moves),
+    // and leans in a little each time a new video comes forward
+    const follow = stage.name === "land" ? band(stage.t, 0, 0.1, 0.55, 0.82)
+      : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
+    const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.1, follow), lerp(shot.target[2], fig.z, follow)];
+    const inside = stage.name === "land" || stage.name === "room" || (stage.name === "exit" && stage.t < 0.45);
+    const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (inside ? 1 : Math.max(1, shot.pos[1] * 0.045));
+    const push = Math.sin(Math.PI * clamp01((now - pushAt) / 1100));
+    const t = clock.t;
+    v1.set(...shot.pos).add(v2.set(wobble(t, 0.9, 1.7, 2.9, 0), wobble(t, 1.1, 2.3, 3.7, 1) * 0.6, wobble(t, 0.7, 1.9, 3.1, 2)).multiplyScalar(amp));
+    v2.set(...target).add(dir.set(wobble(t, 0.6, 1.3, 2.2, 3), wobble(t, 0.8, 1.6, 2.6, 4), wobble(t, 0.5, 1.2, 2.4, 5)).multiplyScalar(amp * 2.2));
+    v1.lerp(v2, 0.04 * push);
+    camera.position.copy(v1);
+    // up follows the camera's own pitch: looking straight down, screen-up is the way it is heading along the floor
+    // (the spiral's turn); looking level, it is the sky. So following him never flips the picture.
+    dir.subVectors(v2, v1).normalize();
+    const flat = Math.hypot(dir.x, dir.z);
+    const head = flat > 0.2 ? q1.set(dir.x / flat, 0, dir.z / flat, 0) : q1.set(shot.up[0], 0, shot.up[2], 0);
+    const level = clamp01((1 - Math.abs(dir.y)) * 1.7);
+    camera.up.set(head.x * (1 - level), level, head.z * (1 - level)).normalize();
+    camera.lookAt(v2);
+    camera.rotateZ(wobble(t, 0.5, 1.1, 1.9, 6) * amp * 0.18);
+    if (Math.abs(camera.fov - shot.fov) > 0.01) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
+    // how fast the camera rushes and turns: that is what streaks the picture
+    camera.getWorldDirection(dir);
+    const rush = dt > 0 ? prevPos.distanceTo(camera.position) / dt : 0;
+    const turnRate = dt > 0 ? prevDir.angleTo(dir) / dt : 0;
+    prevPos.copy(camera.position); prevDir.copy(dir);
 
     // the rows turn while you descend and rise; in the room they only drift
     const rowScroll = eased < m.room ? eased : eased > m.exit ? m.room + (eased - m.exit) : m.room;
@@ -205,19 +283,20 @@ function start() {
     fog.copy(BG).lerp(BG_END, warm);
     renderer.setClearColor(fog);
 
-    figure.rotation.y = Math.PI + yaw;
-
-    // the screen in front: it comes off the bottom row on the way into the room and goes back on the way out
-    const fly = stage.name === "land" ? smoother((stage.t - 0.3) / 0.62) : stage.name === "room" ? 1 : stage.name === "exit" ? 1 - smoother(stage.t / 0.38) : 0;
+    // the screen in front: as he reaches up, a screen of the bottom row flares white, comes off the wall and floats
+    // forward; on the way out it goes back
+    const flash = stage.name === "land" ? band(stage.t, 0.5, 0.6, 0.64, 0.72) : 0;
+    const fly = stage.name === "land" ? smoother((stage.t - 0.62) / 0.33) : stage.name === "room" ? 1 : stage.name === "exit" ? 1 - smoother(stage.t / 0.38) : 0;
     const turn0 = rowTurn(0, rowScroll, clock.t);
-    if (fly <= 0) {
+    if (fly <= 0 && flash <= 0) {
       if (flying) { wall.setDim(0, slot, 1); wall.restoreCell(0, slot); flying = false; }
       slot = nearestSlot(turn0, Math.PI + yaw);
     } else if (!flying) {
       flying = true;
       wall.setCellPicture(0, slot, atlas.cell(shown));
     }
-    if (flying) wall.setDim(0, slot, fly > 0.02 ? 0.08 : 1);
+    if (flying) wall.setDim(0, slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
+    wall.uniforms.uTime.value = clock.t;
     featured.group.visible = fly > 0.001;
     if (featured.group.visible) {
       const from = slotPose(0, slot, turn0);
@@ -251,14 +330,15 @@ function start() {
     U.uReadyA.value = readyA;
 
     // another video's turn: load it, then swap through the strips
-    const target = stage.active;
-    if (!swap && target !== shown) {
-      swap = { k: target, asked: now, t0: 0 };
-      load(vB, target);
+    const next = stage.active;
+    if (!swap && next !== shown) {
+      swap = { k: next, asked: now, t0: 0 };
+      if (stage.name === "room") pushAt = now;
+      load(vB, next);
       vB.muted = !sound;
       vB.play()?.catch(() => {});
-      U.uCellB.value.set(...atlas.cell(target));
-      U.uColB.value.copy(colors[target]);
+      U.uCellB.value.set(...atlas.cell(next));
+      U.uColB.value.copy(colors[next]);
       U.uReadyB.value = 0;
     }
     if (swap) {
@@ -287,12 +367,14 @@ function start() {
     ui.setActive(stage.active, `#${colors[stage.active].getHexString()}`);
     ui.frame(weights(stage));
     atlas.flush(now);
-    renderer.render(scene, camera);
+    const zoom = reduced ? 0 : Math.min(0.08, rush * 0.0026 + turnRate * 0.0075);
+    post.render(scene, camera, { bloom: perf.glow ? 0.85 : 0, zoom, chroma: 0.012 + zoom * 0.3, vignette: 0.5 + 0.12 * warm, time: clock.t });
   };
   requestAnimationFrame(frame);
 }
 
-const band = (t: number, a: number, b: number, c: number, d: number) => Math.min(smoother((t - a) / (b - a)), 1 - smoother((t - c) / (d - c)));
+const band = (t: number, a: number, b: number, c: number, d: number) =>
+  Math.max(0, Math.min(1, smoother((t - a) / (b - a)), 1 - smoother((t - c) / (d - c))));
 
 /** Which words show at a stage. */
 function weights(s: Stage): Weights {

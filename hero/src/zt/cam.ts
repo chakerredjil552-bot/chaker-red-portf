@@ -29,8 +29,11 @@ export function topHeight(aspect: number, fill: number): number {
   return WALL_TOP + WALL.radius / (fill * half);
 }
 
-/** The room turns one full circle over all the videos. */
-export const roomYaw = (room: number, count: number): number => (-room * Math.PI * 2) / Math.max(1, count);
+/** The camera turns this far round the axis as it sinks down the well: a slow spiral. */
+export const ROLL = Math.PI / 3;
+
+/** The room turns one full circle over all the videos, starting where the spiral down left the camera. */
+export const roomYaw = (room: number, count: number): number => ROLL - (room * Math.PI * 2) / Math.max(1, count);
 
 /** The camera in the room, behind the figure, facing the wall at `yaw`. */
 export function roomShot(yaw: number, aspect: number): Shot {
@@ -38,7 +41,10 @@ export function roomShot(yaw: number, aspect: number): Shot {
   return { pos: rotY([0, 2.15, tall ? 8.4 : 6.4], yaw), target: rotY([0, 3.1, -10], yaw), up: LEVEL_UP, fov: fovFor(true, aspect) };
 }
 
-const down = (y: number, aspect: number): Shot => ({ pos: [0, y, 0], target: [0, 0, 0], up: DOWN_UP, fov: fovFor(false, aspect) });
+/** Looking straight down the well; `roll` turns the picture round the axis. Screen-up points along the floor at the
+ *  wall the room view would face at the same yaw, so tilting up from it never twists. */
+const down = (y: number, aspect: number, roll = 0): Shot =>
+  ({ pos: [0, y, 0], target: [0, 0, 0], up: rotY(DOWN_UP, roll), fov: fovFor(false, aspect) });
 
 const blend = (a: Shot, b: Shot, t: number): Shot => ({
   pos: mix(a.pos, b.pos, t), target: mix(a.target, b.target, t), up: norm(mix(a.up, b.up, t)), fov: lerp(a.fov, b.fov, t),
@@ -53,14 +59,16 @@ export function shotAt(stage: Stage, plan: Plan, aspect: number): Shot {
   const yEnd = topHeight(aspect, tall ? 0.52 : 0.42);
   switch (stage.name) {
     case "intro": return down(yIntro - 1.5 * smoother(stage.t), aspect);
-    case "descent": return down(lerp(yIntro - 1.5, BOTTOM_Y, smoother(stage.t)), aspect);
-    case "land": return blend(down(BOTTOM_Y, aspect), roomShot(roomYaw(0, plan.count), aspect), smoother(stage.t));
+    case "descent": return down(lerp(yIntro - 1.5, BOTTOM_Y, smoother(stage.t)), aspect, ROLL * smoother(stage.t));
+    case "land": return blend(down(BOTTOM_Y, aspect, ROLL), roomShot(roomYaw(0, plan.count), aspect), smoother(stage.t));
     case "room": return roomShot(roomYaw(stage.room, plan.count), aspect);
     case "exit": {
-      const leave = roomShot(roomYaw(plan.count - 1, plan.count), aspect);
-      if (stage.t < 0.45) return blend(leave, down(BOTTOM_Y, aspect), smoother(stage.t / 0.45));
-      return down(lerp(BOTTOM_Y, yEnd, smoother((stage.t - 0.45) / 0.55)), aspect);
+      const yaw = roomYaw(plan.count - 1, plan.count);
+      const leave = roomShot(yaw, aspect);
+      if (stage.t < 0.45) return blend(leave, down(BOTTOM_Y, aspect, yaw), smoother(stage.t / 0.45));
+      const rise = smoother((stage.t - 0.45) / 0.55);
+      return down(lerp(BOTTOM_Y, yEnd, rise), aspect, yaw + 0.7 * rise);
     }
-    default: return down(yEnd, aspect);
+    default: return down(yEnd, aspect, roomYaw(plan.count - 1, plan.count) + 0.7);
   }
 }

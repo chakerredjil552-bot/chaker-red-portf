@@ -103,19 +103,25 @@ export class Wall {
       uFogRange: { value: new THREE.Vector2(60, 220) },
       uGlow: { value: new THREE.Color("#2f62ff") },
       uAspect: { value: WALL.panelW / WALL.panelH },
+      uTime: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
       vertexShader: /* glsl */ `
         attribute vec4 aCell;
         attribute float aDim;
+        uniform float uTime;
         varying vec2 vUv;
         varying vec4 vCell;
         varying float vDim;
         varying float vY;
         varying float vDepth;
         void main() {
-          vUv = uv; vCell = aCell; vDim = aDim;
+          vUv = uv; vCell = aCell;
+          // every screen breathes a little, each at its own pace, like footage playing
+          float id = float(gl_InstanceID);
+          float flick = 0.93 + 0.07 * sin(uTime * (1.1 + fract(id * 0.618) * 2.3) + id * 1.7);
+          vDim = aDim * flick;
           vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
           vY = world.y;
           vec4 mv = viewMatrix * world;
@@ -141,7 +147,7 @@ export class Wall {
           vec3 col = texture2D(uAtlas, vCell.xy + vUv * vCell.zw).rgb;
           col *= 1.0 - 0.32 * smoothstep(-0.05, 0.0, d);
           col *= vDim;
-          col += uGlow * 0.2 * exp(-vY * 0.2) * max(vDim, 0.25);
+          col += uGlow * 0.2 * exp(-vY * 0.2) * clamp(vDim, 0.25, 1.0);
           gl_FragColor = vec4(mix(col, uFog, smoothstep(uFogRange.x, uFogRange.y, vDepth)), 1.0);
           #include <colorspace_fragment>
         }`,
@@ -196,18 +202,27 @@ export class Wall {
 /** The floor: a disc of blue light, a soft shadow under the figure. */
 export function makeFloor(): THREE.Mesh {
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uInner: { value: new THREE.Color("#3c74ff") }, uOuter: { value: new THREE.Color("#0b2bb0") }, uEdge: { value: new THREE.Color("#04082a") } },
-    vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uInner; uniform vec3 uOuter; uniform vec3 uEdge;
-      varying vec2 vUv;
+    uniforms: {
+      uInner: { value: new THREE.Color("#3c74ff") }, uOuter: { value: new THREE.Color("#0b2bb0") }, uEdge: { value: new THREE.Color("#04082a") },
+      uFig: { value: new THREE.Vector2() }, uRadius: { value: WALL.radius },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vXZ;
       void main() {
-        float r = length(vUv - 0.5) * 2.0;
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vXZ = w.xz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uInner; uniform vec3 uOuter; uniform vec3 uEdge; uniform vec2 uFig; uniform float uRadius;
+      varying vec2 vXZ;
+      void main() {
+        float r = length(vXZ) / uRadius;
         vec3 col = mix(uInner, uOuter, smoothstep(0.0, 0.95, r));
         col = mix(col, uEdge, smoothstep(0.86, 1.0, r));
-        // the figure's shadow, soft, a little longer toward the camera
-        vec2 s = (vUv - 0.5) / vec2(0.026, 0.034);
-        col *= 1.0 - 0.7 * exp(-dot(s, s));
+        // soft contact shadow round his feet (his long shadow is drawn separately)
+        vec2 s = (vXZ - uFig) / 0.45;
+        col *= 1.0 - 0.55 * exp(-dot(s, s));
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -269,7 +284,7 @@ export class Featured {
           vec2 uv = clamp(vUv + vec2(0.0, (hash(i + 7.0) - 0.5) * 0.22 * bump), 0.0, 1.0);
           vec3 frame = mix(uColA, uColB, smoothstep(0.15, 0.85, uMix));
           vec3 col = local > 0.5 ? pickB(uv) : pickA(uv);
-          col += bump * 0.35 * frame;
+          col += bump * 0.9 * frame;
           col = mix(col, frame, smoothstep(-uFrame - 0.008, -uFrame, d));
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
