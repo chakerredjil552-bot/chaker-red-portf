@@ -96,7 +96,7 @@ html:has(.dh-pin), html:has(.dh-pin) body { overflow: hidden; height: 100%; over
 }
 .reel.is-hover .reel-meta, .reel:focus-visible .reel-meta, .reel.is-front .reel-meta { opacity: 1; transform: none; }
 /* on the craft beat the card fills the screen: just a play button, the title is in the words beside it */
-.reel.is-front:not(.is-hover) .reel-meta { background: none; align-items: center; padding-bottom: 22px; }
+.reel.is-front:not(.is-hover) .reel-meta { background: none; align-items: center; padding-bottom: 64px; }
 .reel.is-front:not(.is-hover) .reel-meta b, .reel.is-front:not(.is-hover) .reel-meta span { display: none; }
 .reel.is-front:not(.is-hover) .reel-meta i {
   padding: 9px 16px; border-radius: 999px; background: var(--red); color: #fff; opacity: 1; font-weight: 700; letter-spacing: .08em;
