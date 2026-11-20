@@ -10,7 +10,7 @@ import { WALL, nearestSlot, rowTurn, slotPose } from "./wall.ts";
 import { rotY, shotAt, type V3 } from "./cam.ts";
 import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
-import { makeFigure, pose } from "./figure.ts";
+import { Man, wonder } from "./man.ts";
 import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
 
@@ -21,6 +21,8 @@ const BG = new THREE.Color("#0c0a0b");
 const BG_END = new THREE.Color("#1d0d11");
 /** The light that throws his long shadow: from high up, behind and to the right, so it falls toward the front left. */
 const LIGHT = new THREE.Vector3(-0.55, -1, 0.42);
+/** Where this script was loaded from: the model of the man sits next to it. */
+const HERE = (document.currentScript as HTMLScriptElement | null)?.src || location.href;
 
 /** Shortest signed turn from angle a to angle b, radians. */
 const angleTo = (a: number, b: number) => ((((b - a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
@@ -85,10 +87,10 @@ function start() {
   const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize);
   const fog = BG.clone();
   const wall = new Wall(atlas, fog);
-  const figure = makeFigure(LIGHT);
+  const man = new Man(new URL("man.glb?v=1", HERE).href, LIGHT);
   const floor = makeFloor();
   const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
-  scene.add(wall.mesh, floor, figure.group);
+  scene.add(wall.mesh, floor, man.group);
   const post = new Post(renderer, phone ? 0.22 : 0.3, phone);
 
   // two video elements: the one on the screen, and the next one, loaded during the swap
@@ -190,9 +192,9 @@ function start() {
   const clock = { t: 0 };
   const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), dummy = new THREE.Object3D();
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
-  // the figure: where he is, how far into a stride, which way he faces
+  // the figure: where he is, how far he has walked (his place in the stride), which way he faces
   const start0 = markAt(stage, plan);
-  const fig = { x: start0.x, z: start0.z, walk: 0, phase: 0, face: start0.face, reach: 0 };
+  const fig = { x: start0.x, z: start0.z, walk: 0, dist: 0, face: start0.face, reach: 0 };
   // the camera's own motion, for the streaks; a push-in each time a new video comes forward
   const prevPos = new THREE.Vector3(), prevDir = new THREE.Vector3(), dir = new THREE.Vector3();
   let pushAt = -1e9;
@@ -233,16 +235,24 @@ function start() {
     fig.x = mk.x; fig.z = mk.z;
     const pace = dt > 0 ? moved / dt : 0;
     fig.walk += (Math.min(1, pace / 1.1) - fig.walk) * (1 - Math.exp(-(pace > 0.05 ? 8 : 3) * dt));
-    fig.phase += (Math.min(moved, 0.2) / 1.4) * Math.PI * 2;
+    fig.dist += Math.min(moved, 0.2);
     const facing = pace > 0.15 ? Math.atan2(dx, dz) : mk.face;
     fig.face += angleTo(fig.face, facing) * (1 - Math.exp(-(pace > 0.15 ? 10 : 4) * dt));
     fig.reach += (mk.reach - fig.reach) * (1 - Math.exp(-10 * dt));
-    const look = stage.name === "room" ? 0.22 * Math.sin(clock.t * 0.31) + 0.1 * Math.sin(clock.t * 0.17 + 2) : 0;
-    for (const r of [figure.rig, figure.shadow]) {
-      r.root.position.set(fig.x, 0, fig.z);
-      r.root.rotation.y = fig.face;
-      pose(r, { phase: fig.phase, walk: reduced ? 0 : fig.walk, reach: fig.reach, time: clock.t, look });
-    }
+    // standing, he looks round slowly, left and right and up at the wall, wondering where he is; walking, he
+    // glances about less; reaching, he looks up at the screen
+    const w = wonder(clock.t);
+    const still = 1 - fig.walk, inside = stage.name === "land" || stage.name === "room";
+    man.root.position.set(fig.x, 0, fig.z);
+    man.root.rotation.y = fig.face;
+    man.update({
+      dist: fig.dist,
+      walk: reduced ? 0 : fig.walk,
+      reach: fig.reach,
+      look: reduced ? 0 : w.look * (0.35 + 0.65 * still) * (1 - fig.reach),
+      lift: reduced ? 0 : lerp(w.lift * (inside ? 1 : 0.4), 0.42, fig.reach),
+      dt: reduced ? 0 : dt,
+    });
     floorU.uFig.value.set(fig.x, fig.z);
 
     // the camera: it follows him as he walks in and out, sways like it is held by hand (more when it moves),
@@ -250,8 +260,8 @@ function start() {
     const follow = stage.name === "land" ? band(stage.t, 0, 0.1, 0.55, 0.82)
       : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
     const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.1, follow), lerp(shot.target[2], fig.z, follow)];
-    const inside = stage.name === "land" || stage.name === "room" || (stage.name === "exit" && stage.t < 0.45);
-    const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (inside ? 1 : Math.max(1, shot.pos[1] * 0.045));
+    const low = inside || (stage.name === "exit" && stage.t < 0.45);
+    const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (low ? 1 : Math.max(1, shot.pos[1] * 0.045));
     const push = Math.sin(Math.PI * clamp01((now - pushAt) / 1100));
     const t = clock.t;
     v1.set(...shot.pos).add(v2.set(wobble(t, 0.9, 1.7, 2.9, 0), wobble(t, 1.1, 2.3, 3.7, 1) * 0.6, wobble(t, 0.7, 1.9, 3.1, 2)).multiplyScalar(amp));
@@ -298,6 +308,7 @@ function start() {
     if (flying) wall.setDim(0, slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
     wall.uniforms.uTime.value = clock.t;
     featured.group.visible = fly > 0.001;
+    if (!featured.group.visible) man.light(U.uColA.value, 0, v1.set(0, 0, -1));
     if (featured.group.visible) {
       const from = slotPose(0, slot, turn0);
       const front = rotY(tall ? [0, 3.75, -2.4] : [0, 3.55, -2.9], yaw);
@@ -316,6 +327,8 @@ function start() {
       featured.size(lerp(WALL.panelW, w, fly), lerp(WALL.panelH, h, fly));
       featured.uniforms.uFrame.value = 0.045 * fly;
       featured.glowOpacity(fly);
+      // its light on him, in its colour
+      man.light(U.uColA.value, 0.9 * fly + 2.5 * flash, v1.set(featured.group.position.x - fig.x, featured.group.position.y - 1.4, featured.group.position.z - fig.z));
       U.uFitA.value.copy(coverFit(isWide(VIDEOS[shown]) ? 16 / 9 : 9 / 16, w / h));
       if (swap) U.uFitB.value.copy(coverFit(isWide(VIDEOS[swap.k]) ? 16 / 9 : 9 / 16, w / h));
     }

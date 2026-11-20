@@ -1,7 +1,6 @@
-/** The 3D scene: the wall of screens (one draw call), the blue floor, the figure and the screen that comes off the wall. */
+/** The 3D scene: the wall of screens (one draw call), the blue floor and the screen that comes off the wall. */
 
 import * as THREE from "three";
-import { makeFigure } from "./figure.ts";
 import { WALL, cellFor, rowTurn, slotPose } from "./wall.ts";
 
 const ROUND_BOX = /* glsl */ `

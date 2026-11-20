@@ -31,7 +31,8 @@ export class Post {
   constructor(private readonly renderer: THREE.WebGLRenderer, private readonly scale: number, light = false) {
     const opts = { type: THREE.HalfFloatType, depthBuffer: false } as const;
     // a phone gets fewer samples and shorter streaks: the same look for less work
-    this.scene = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: light ? 2 : 4 });
+    // with a stencil, so his shadow darkens each pixel once
+    this.scene = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: light ? 2 : 4, stencilBuffer: true });
     this.a = new THREE.WebGLRenderTarget(1, 1, opts);
     this.b = new THREE.WebGLRenderTarget(1, 1, opts);
     this.bright = new THREE.ShaderMaterial({
