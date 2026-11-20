@@ -10,25 +10,16 @@
 <meta property="og:image" content="thumbs/duo-chocolate.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E6%AD%A6&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="hero-assets/deal-hero.css?v=7">
-<script>
-  // the reel ring's entrance owns the first seconds, unless motion is reduced or the link points at one video
-  if (!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) && (location.hash.length < 2 || location.hash === "#top")) {
-    document.documentElement.classList.add("deal-entering");
-    // if the hero's script never arrives, give the page back
-    setTimeout(function () { if (!document.querySelector(".dh")) document.documentElement.classList.remove("deal-entering"); }, 8000);
-  }
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="hero-assets/zoetrope.css?v=1">
 <style>
   :root {
-    --bg: #0b0909; --panel: #171110; --line: #2e2422; --text: #f2e9d6; --muted: #a8998a;
+    --bg: #0c0a0b; --panel: #171110; --line: #2e2422; --text: #f2e9d6; --muted: #a8998a;
     --accent: #e3170a; --accent2: #ff6a3d;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; }
   a { color: inherit; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
 
@@ -187,7 +178,7 @@
   <div class="tb-right"><div class="contact" id="contact"></div></div>
 </nav>
 
-<!-- the hero: a ring of the videos below, drawn by hero-assets/deal-hero.js (source in hero/) -->
+<!-- the hero: the zoetrope, a well of the videos in WebGL, drawn by hero-assets/zoetrope.js (source in hero/) -->
 <div id="deal"></div>
 
 <main class="wrap" id="videos">
@@ -392,6 +383,6 @@
   fromHash();
   addEventListener("hashchange", fromHash);
 </script>
-<script src="hero-assets/deal-hero.js?v=5"></script>
+<script src="hero-assets/zoetrope.js?v=1"></script>
 </body>
 </html>

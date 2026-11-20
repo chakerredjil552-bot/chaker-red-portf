@@ -6,9 +6,9 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 - `videos.js`: the list of videos and the contact details. **This is the only file to edit.**
 - `videos/`: the video files (720×1280 H.264 + AAC, fast start, kept small for the web)
 - `thumbs/`: one 540×960 cover image per video
-- `previews/`: short 9:16 clips (and their first frames) for the hero's ring of videos
-- `hero-assets/`: the built hero (`deal-hero.js`, `deal-hero.css`), and `musashi-panels.webp`, an alternative backdrop that is not used
-- `hero/`: the hero's source (React + Motion, plain CSS 3D) and `hero/art/`, which draws the Musashi manga panels
+- `previews/`: short 9:16 clips and their first frames; the frames paper the hero's wall of screens
+- `hero-assets/`: the built hero (`zoetrope.js` with three.js inside, `zoetrope.css`); `musashi-panels.webp` is an old backdrop, not used
+- `hero/`: the hero's source (TypeScript + three.js, in `hero/src/zt/`); `hero/art/` drew the old Musashi panels
 
 ## Add a video
 1. Compress it into `videos/<id>.mp4`:
@@ -18,12 +18,12 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
    For a horizontal video, use `scale=960:540`.
 3. Add an entry at the top of `window.VIDEOS` in `videos.js`. Set `ratio: "16:9"` for a horizontal video (vertical `"9:16"` is the default).
    Each format gets its own section with cards in its real shape, and once both formats exist the page shows filter buttons (All / Vertical / Horizontal).
-4. Optional, for the ring of videos at the top: pick 2–3 moments, add them as `scenes: [s1, s2, s3]` (seconds) and cut a
+4. Optional, for the wall of screens at the top: pick 2–3 moments, add them as `scenes: [s1, s2, s3]` (seconds) and cut a
    3-second vertical preview for each, numbered from 1:
    `ffmpeg -ss <s> -i videos/<id>.mp4 -t 3 -an -vf "scale=360:640,fps=30" -c:v libx264 -crf 29 -pix_fmt yuv420p -movflags +faststart previews/<id>-1.mp4`
    `ffmpeg -ss <s> -i videos/<id>.mp4 -frames:v 1 -vf scale=360:640 -q:v 5 previews/<id>-1.jpg`
    For a horizontal video, put `crop=ih*9/16:ih,` in front of `scale=360:640`. Without `scenes`, the video still gets a card
-   on the ring, playing its own file.
+   on the wall, showing its cover.
 5. In `index.html`, bump the number in `videos.js?v=…` so browsers fetch the new list instead of a cached one.
 6. Commit and push; GitHub Pages updates in about a minute.
 
@@ -31,30 +31,27 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 `window.CONTACT` in `videos.js`: `email`, and `whatsapp` (digits only, international format). An empty value hides that button.
 
 ## The hero
-A scroll story with one object: the ring of the videos, on a dark set (red glow, a little film grain, red corner marks,
-the name in a brush face behind the ring). The scroll is the timeline. One loop plays five beats, each a complete shot
-of the ring written as a cue in `hero/src/story.ts`; between cues every value blends on a smooth curve, so the camera
-rests on each beat and moves between them:
+The page is one long scroll over a WebGL scene, a zoetrope: a round well whose wall is papered with the videos.
+`hero/src/zt/plan.ts` cuts the scroll into stages:
 
-| Scroll | Camera | The ring | Words |
-|---|---|---|---|
-| 0% Hero | wide, centred | whole, a slow turn | the name, one line |
-| 22% Craft | pushed in close | one video fills the screen and plays | "Cut on the beat." + the video playing |
-| 44% Inside | pulled back | splits into two layers | "Idea to final cut." + the five steps |
-| 66% Work | a slow orbit from above | every card named, a line to each | "{n} videos, one eye." |
-| 86% Talk | back out | whole again | "Your next video starts here." + WhatsApp, email, watch the reel |
+| Stage | What you see | Words |
+|---|---|---|
+| Intro | looking straight down the well: rings of screens round a blue floor, a figure on it | "Chaker Red presents · Moving Pictures", Enter with sound / Enter quietly, Scroll to descend |
+| Descent | the camera sinks down the well; neighbouring rows turn opposite ways as you scroll | two notes, one on each side |
+| Land | the camera tilts up into the round room; the first video comes off the bottom row and floats forward | "02 · Pull one off the wall." |
+| Room | one stop per video (the page snaps to them): each one steps forward in a glowing frame and plays, the next one swapping in through vertical strips; the camera turns a little each time | the video's title in big serif, its line and tag, Watch it / Open in a new tab, the counter, the index on the right |
+| Exit and end | the camera rises out of the well until it is a small medallion on dark maroon | "Your video, next on the wall.", Start a project / Email me |
 
-The last beat leads back into the first, so the story never ends either way: scrolling down plays it forward (the cards
-move right), up plays it backward. The page itself never scrolls: the wheel, a vertical swipe, the arrow keys or the
-rail at the bottom move the story; a sideways drag turns the ring. When the visitor stops, the camera settles on the
-nearest beat. The words are real HTML over the ring; the rail and the counter show where you are.
+The top bar holds the name, **Index** (every video in a list; click one to go to it) and **Sound** (the video in front
+plays with sound). Click the screen in front to watch it in the player; click any screen on the wall to bring its video
+forward. The camera eases after the scroll, so it never snaps. The wall is one instanced mesh whose pictures sit in
+one texture, filled in as the frames load; the first video only loads once the camera is on its way down. With reduced
+motion the wall stops drifting and the camera follows the scroll at once. Without WebGL the page shows the plain grid
+of videos instead. Shared `#video-id` links still open their video in the player.
 
-The first seconds are the reveal: the cards are dealt round the ring while a counter reads what has really loaded,
-then the ring settles into the first beat. Click a card to play that video. Escape, Tab or the Skip button end the
-entrance at once; with reduced motion, or on a link to one video (`#video-id`), there is no entrance. Only the hero is
-shown: the video grid, the contact box and the footer are hidden in `index.html` (one CSS line,
-`main#videos, .cta, footer { display: none; }`), and shared `#video-id` links still open their video.
+The figure is built from simple shapes and shaded as a silhouette lit by the floor; the glow colour of each video is
+taken from its cover.
 
-To change it: edit `hero/src/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
-bump `deal-hero.js?v=…` and `deal-hero.css?v=…` in `index.html`. The words are in `hero/src/copy.ts`, the beats in
-`hero/src/story.ts`; `hero/src/pose.ts` places every card. Both are unit tested (`pose.test.ts`, `story.test.ts`).
+To change it: edit `hero/src/zt/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
+bump `zoetrope.js?v=…` and `zoetrope.css?v=…` in `index.html`. The words are in `hero/src/zt/ui.ts`; the stages, the
+wall and the camera path (`plan.ts`, `wall.ts`, `cam.ts`) are unit tested in `hero/src/zt/zt.test.ts`.
