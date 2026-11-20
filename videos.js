@@ -6,6 +6,17 @@
 //   previews/<id>-<n>.mp4 and .jpg (see README). Without scenes the video still gets a card on the ring.
 window.VIDEOS = [
   {
+    id: "bluefin-oil-painting",
+    title: "Bluefin — a tuna breaks out of the storm",
+    tag: "Short film · Procedural oil painting, particles & kinetic typography",
+    duration: "0:16",
+    ratio: "16:9",
+    socialLikes: 0, // real likes this video got on social media; site likes add on top
+    file: "videos/bluefin-oil-painting.mp4",
+    thumb: "thumbs/bluefin-oil-painting.jpg",
+    scenes: [3.7, 5.6, 7.9], // seconds where the hero's preview clips start: previews/bluefin-oil-painting-1.mp4 …
+  },
+  {
     id: "bushra-school-awareness",
     title: "وين راهم ولادنا؟ — school awareness reel",
     tag: "Awareness film · Arabic kinetic typography & motion design",
