@@ -60,7 +60,15 @@ export function shotAt(stage: Stage, plan: Plan, aspect: number): Shot {
   switch (stage.name) {
     case "intro": return down(yIntro - 1.5 * smoother(stage.t), aspect);
     case "descent": return down(lerp(yIntro - 1.5, BOTTOM_Y, smoother(stage.t)), aspect, ROLL * smoother(stage.t));
-    case "land": return blend(down(BOTTOM_Y, aspect, ROLL), roomShot(roomYaw(0, plan.count), aspect), smoother(stage.t));
+    case "land": {
+      // halfway, the camera is behind him and above, looking down at about 40 degrees, the wall rising at the top
+      const mid: Shot = {
+        pos: rotY([-0.8, 6.2, tall ? 9.2 : 7.4], ROLL), target: rotY([-0.6, 0.8, -1], ROLL),
+        up: norm(mix(rotY(DOWN_UP, ROLL), LEVEL_UP, 0.5)), fov: lerp(fovFor(false, aspect), fovFor(true, aspect), 0.5),
+      };
+      if (stage.t < 0.38) return blend(down(BOTTOM_Y, aspect, ROLL), mid, smoother(stage.t / 0.38));
+      return blend(mid, roomShot(roomYaw(0, plan.count), aspect), smoother((stage.t - 0.38) / 0.62));
+    }
     case "room": return roomShot(roomYaw(stage.room, plan.count), aspect);
     case "exit": {
       const yaw = roomYaw(plan.count - 1, plan.count);
