@@ -7,7 +7,7 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 - `videos/`: the video files (720×1280 H.264 + AAC, fast start, kept small for the web)
 - `thumbs/`: one 540×960 cover image per video
 - `previews/`: short 9:16 clips (and their first frames) for the hero's ring of videos
-- `hero-assets/`: the built hero (`deal-hero.js`, `deal-hero.css`) and its backdrop, `musashi-panels.webp`
+- `hero-assets/`: the built hero (`deal-hero.js`, `deal-hero.css`), and `musashi-panels.webp`, an alternative backdrop that is not used
 - `hero/`: the hero's source (React + Motion, plain CSS 3D) and `hero/art/`, which draws the Musashi manga panels
 
 ## Add a video
@@ -31,16 +31,30 @@ A one-page site that shows only my videos. Each video has its own link (`#video-
 `window.CONTACT` in `videos.js`: `email`, and `whatsapp` (digits only, international format). An empty value hides that button.
 
 ## The hero
-A ring of the videos where the loader and the hero are the same 3D scene: the cards are dealt round a ring on a white
-page while a counter reads what has really loaded, then the camera moves inside the ring and the page clears onto a
-looping black-and-white animation (`hero-assets/bg-run.mp4`, upscaled 2x with Real-ESRGAN (realesr-animevideov3) to 2092x1092, with a reversed copy
-`bg-run-rev.mp4`). The page never scrolls: the wheel, a drag or swipe either way, or the arrow keys turn the ring with no
-end. Down sends the cards right and the backdrop runs forward; up sends them left and it runs backward, faster the faster
-you turn.
-`hero/art/` still draws an alternative backdrop of original Musashi manga panels (`hero-assets/musashi-panels.webp`).
-Click a card to play that video from the scene it shows. The page shows only the hero: the video grid, the contact box and the footer are hidden in `index.html` (one CSS line, `main#videos, .cta, footer { display: none; }`), and shared `#video-id` links still open their video. Escape, Tab or the Skip button end the entrance at once; with
-reduced motion, or on a link to one video (`#video-id`), there is no entrance.
+A scroll story with one object: the ring of the videos, on a dark set (red glow, a little film grain, red corner marks,
+the name in a brush face behind the ring). The scroll is the timeline. One loop plays five beats, each a complete shot
+of the ring written as a cue in `hero/src/story.ts`; between cues every value blends on a smooth curve, so the camera
+rests on each beat and moves between them:
+
+| Scroll | Camera | The ring | Words |
+|---|---|---|---|
+| 0% Hero | wide, centred | whole, a slow turn | the name, one line |
+| 22% Craft | pushed in close | one video fills the screen and plays | "Cut on the beat." + the video playing |
+| 44% Inside | pulled back | splits into two layers | "Idea to final cut." + the five steps |
+| 66% Work | a slow orbit from above | every card named, a line to each | "{n} videos, one eye." |
+| 86% Talk | back out | whole again | "Your next video starts here." + WhatsApp, email, watch the reel |
+
+The last beat leads back into the first, so the story never ends either way: scrolling down plays it forward (the cards
+move right), up plays it backward. The page itself never scrolls: the wheel, a vertical swipe, the arrow keys or the
+rail at the bottom move the story; a sideways drag turns the ring. When the visitor stops, the camera settles on the
+nearest beat. The words are real HTML over the ring; the rail and the counter show where you are.
+
+The first seconds are the reveal: the cards are dealt round the ring while a counter reads what has really loaded,
+then the ring settles into the first beat. Click a card to play that video. Escape, Tab or the Skip button end the
+entrance at once; with reduced motion, or on a link to one video (`#video-id`), there is no entrance. Only the hero is
+shown: the video grid, the contact box and the footer are hidden in `index.html` (one CSS line,
+`main#videos, .cta, footer { display: none; }`), and shared `#video-id` links still open their video.
 
 To change it: edit `hero/src/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
-bump `deal-hero.js?v=…` and `deal-hero.css?v=…` in `index.html`. `hero/src/pose.ts` places every card and is unit
-tested in `hero/src/pose.test.ts`.
+bump `deal-hero.js?v=…` and `deal-hero.css?v=…` in `index.html`. The words are in `hero/src/copy.ts`, the beats in
+`hero/src/story.ts`; `hero/src/pose.ts` places every card. Both are unit tested (`pose.test.ts`, `story.test.ts`).

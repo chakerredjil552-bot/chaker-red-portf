@@ -1,9 +1,14 @@
-/* Deal hero: the loader and the hero are one scene, in front of a strip of Musashi manga panels. Shared ring values arrive as CSS variables on .dw-ring and
-   .dw-stage; each card only carries its own --yaw, --y, --d and --o. --ex (0..1, the reveal) lives on <html>. */
+/* The hero: a scroll story. One object, the ring of videos, on a dark set; the scroll is its timeline. Shared ring
+   values arrive as CSS variables on .dw-ring and .dw-stage; each card only carries its own --yaw, --y, --r, --d and
+   --o. --ex (0..1, the entrance settling in) lives on <html>. */
 
 :root {
+  --brush: "Kaushan Script", "Segoe Script", cursive;
   --display: "Space Grotesk", system-ui, sans-serif; --body: "Space Grotesk", system-ui, sans-serif;
-  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace; --paper: #f4f0e7; --ink: #121014;
+  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --set: #0b0909; --cream: #efe3c8; --cream-2: rgba(239,227,200,.72); --cream-3: rgba(239,227,200,.46);
+  --red: #e3170a; --red-glow: rgba(227,23,10,.55); --hair: rgba(239,227,200,.16);
+  --ink: #0b0909; --paper: #efe3c8;
 }
 
 /* ---- the entrance owns the page while it plays ---- */
@@ -11,204 +16,299 @@ html.deal-entering, html.deal-entering body { overflow: hidden; }
 html.deal-entering .topbar .tb-right { opacity: clamp(0, (var(--ex, 0) - .4) * 3.4, 1); translate: 0 calc((1 - clamp(0, (var(--ex, 0) - .4) * 3.4, 1)) * -12px); }
 html.deal-entering [data-wordmark] { opacity: clamp(0, (var(--ex, 0) - .549) * 1000, 1); }
 html.deal-entering .topbar::before { opacity: 0; }
-#deal:empty { height: 100vh; height: 100svh; }
-html.deal-entering #deal:empty { background: #fff; }
+/* before the script arrives: the dark set, never a blank white page */
+#deal:empty { height: 100vh; height: 100svh; background: radial-gradient(60% 50% at 80% 10%, rgba(140,10,6,.35), transparent 70%), var(--set); }
+.topbar .wordmark { font: 400 26px/1 var(--brush); letter-spacing: 0; color: var(--cream); }
 
 .sr-only {
   position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* ---- the hero: pinned while the first stretch of scrolling turns the ring ---- */
-/* the page never scrolls: the wheel, swipes and keys turn the ring instead, endlessly */
+/* ---- the stage: the page never scrolls, the wheel, swipes and keys play the story instead, endlessly ---- */
 html:has(.dh-pin), html:has(.dh-pin) body { overflow: hidden; height: 100%; overscroll-behavior: none; }
-.dh-pin { position: relative; z-index: 2; height: 100vh; height: 100svh; }
-.dh { touch-action: none; }
+.dh-pin { position: relative; z-index: 2; height: 100vh; height: 100svh; touch-action: none; -webkit-user-select: none; user-select: none; }
 .dh {
-  position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 520px; overflow: hidden; isolation: isolate;
-  background: var(--bg, #0d0b10);
-}
-/* instead of a sky: Musashi manga panels, a strip that tiles sideways and pans with the ring */
-.dh-sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-.dh-sky-track { position: absolute; top: 0; left: 0; height: 100%; display: flex; transform: translate3d(var(--pan, 0px), 0, 0); will-change: transform; }
-.dh-bgvid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; opacity: 0; }
-.dh-bgvid.on { opacity: 1; }
-.dh-sky-track img { display: block; flex: none; height: 100%; width: auto; max-width: none; -webkit-user-drag: none; }
-/* a shadow of ink behind the ring so the videos sit in front of the panels */
-.dh-sky::after {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(70% 34% at 50% var(--ring-y-sky, 44%), rgba(13,11,16,.3), rgba(13,11,16,0) 100%);
-}
-@media (max-aspect-ratio: 5/6) {
-  .dh-sky::after { --ring-y-sky: 36%; }
-  /* a landscape video cropped to a tall screen would be blown up 4-5 times: on phones it fills a band behind the ring
-     instead, fading into the dark, so it stays sharp and the runner stays in frame */
-  .dh-bgvid {
-    top: 2%; height: 72%; object-position: 27% 50%;
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 78%, transparent);
-            mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 78%, transparent);
-  }
-}
-.dh-white { position: absolute; inset: 0; z-index: 0; background: #fff; pointer-events: none; }
-.dh-shade {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background:
-    linear-gradient(to top, rgba(13,11,16,.98) 0%, rgba(13,11,16,.86) 22%, rgba(13,11,16,.42) 40%, rgba(13,11,16,.08) 56%, rgba(13,11,16,0) 64%),
-    linear-gradient(to bottom, rgba(13,11,16,.55) 0%, rgba(13,11,16,0) 16%),
-    radial-gradient(120% 90% at 50% 44%, rgba(13,11,16,0) 50%, rgba(13,11,16,.45) 100%);
+  position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 480px; overflow: hidden; isolation: isolate;
+  background: var(--set); color: var(--cream); touch-action: none;
 }
 
-/* ---- the wall ---- */
+/* the set: dark, a red glow in two corners, a little film grain; the centre stays bright for the object */
+.dh-set { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.dh-set::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(55% 45% at 88% 4%, rgba(150,14,8,.42), rgba(150,14,8,0) 70%),
+    radial-gradient(45% 40% at 4% 96%, rgba(120,10,6,.32), rgba(120,10,6,0) 70%),
+    radial-gradient(60% 55% at 50% 50%, rgba(60,40,36,.32), rgba(60,40,36,0) 75%),
+    var(--set);
+}
+.dh-set::after {
+  content: ""; position: absolute; inset: -50%; opacity: .07; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* the name, big, behind the ring */
+.dh-title {
+  position: absolute; z-index: 0; left: 0; right: 0; top: calc(var(--title-y, 30%)); text-align: center; pointer-events: none;
+  font: 400 clamp(64px, 15.5vw, 250px)/.9 var(--brush); color: var(--cream); white-space: nowrap; letter-spacing: -.01em;
+  transform: translateY(-50%);
+}
+.dh-title em { font-style: normal; color: var(--red); text-shadow: 0 0 22px var(--red-glow), 0 0 60px rgba(227,23,10,.3); }
+
+/* ---- the ring ---- */
 .dw-stage {
   position: absolute; inset: 0; z-index: 1; overflow: hidden;
-  --ring-y: calc(41% + 3% * var(--ex, 1)); /* the ring and the camera's vanishing point sit together, a little high */
-  perspective: calc(var(--persp, 1000) * 1px); perspective-origin: 50% var(--ring-y);
-  touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  perspective: calc(var(--persp, 1700) * 1px); perspective-origin: calc(50% + var(--cx, 0) * 1px) calc(var(--cy, 400) * 1px);
+  cursor: grab; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
 .dw-stage.is-dragging { cursor: grabbing; }
 .dw-ring {
-  position: absolute; left: 50%; top: var(--ring-y); width: 0; height: 0; transform-style: preserve-3d;
-  transform: rotateZ(calc(var(--roll, -20) * 1deg)) rotateX(calc(var(--tilt, -22) * 1deg));
+  position: absolute; left: calc(50% + var(--cx, 0) * 1px); top: calc(var(--cy, 400) * 1px); width: 0; height: 0; transform-style: preserve-3d;
+  transform: translateZ(calc(var(--dolly, 0) * 1px)) rotateZ(calc(var(--roll, 0) * 1deg)) rotateX(calc(var(--tilt, -12) * 1deg));
 }
+/* faces look outward: the card is flipped in place after it is pushed out to the ring */
 .reel {
-  position: absolute; left: -135px; top: -240px; width: 270px; height: 480px; display: block;
-  transform-style: preserve-3d;
-  transform: rotateY(calc(var(--yaw, 180) * 1deg)) translate3d(0, calc(var(--y, 0) * 1px), calc(var(--r, 460) * -1px)) scale(calc(var(--s, .52) * var(--d, 1)));
-  color: #fff; text-decoration: none; outline: none; -webkit-user-drag: none;
+  position: absolute; left: -135px; top: -240px; width: 270px; height: 480px; display: block; transform-style: preserve-3d;
+  transform: rotateY(calc(var(--yaw, 180) * 1deg)) translate3d(0, calc(var(--y, 0) * 1px), calc(var(--r, 560) * -1px)) rotateY(180deg) scale(calc(var(--s, .64) * var(--d, 1)));
+  color: var(--cream); text-decoration: none; outline: none; -webkit-user-drag: none;
 }
 .reel-face, .reel-back {
-  position: absolute; inset: 0; border-radius: 18px; overflow: hidden; opacity: var(--o, 0);
+  position: absolute; inset: 0; border-radius: 16px; overflow: hidden; opacity: var(--o, 0);
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
 }
-.reel-face { background: #121010; }
+.reel-face { background: #150f0e; }
 .reel-face::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 0 0 3px var(--ink); transition: box-shadow .3s;
+  box-shadow: inset 0 0 0 1px rgba(239,227,200,.22); transition: box-shadow .3s;
 }
-.reel.is-hover .reel-face::after, .reel:focus-visible .reel-face::after { box-shadow: inset 0 0 0 3px var(--accent, #ffcc4d); }
-.reel-cover, .reel-video {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
+.reel.is-hover .reel-face::after, .reel:focus-visible .reel-face::after, .reel.is-front .reel-face::after {
+  box-shadow: inset 0 0 0 2px var(--red), 0 0 0 1px rgba(227,23,10,.4);
 }
+.reel-cover, .reel-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .reel-video { opacity: 0; transition: opacity .45s; }
 .reel-video.is-ready { opacity: 1; }
-.reel-no {
-  position: absolute; top: 14px; left: 16px; font: 500 15px/1 var(--mono, monospace); letter-spacing: .06em;
-  color: #fff; mix-blend-mode: difference;
-}
+.reel-no { position: absolute; top: 14px; left: 16px; font: 700 15px/1 var(--mono); letter-spacing: .06em; color: #fff; mix-blend-mode: difference; }
 .reel-meta {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 80px 18px 18px; display: flex; flex-direction: column; gap: 6px;
-  background: linear-gradient(to top, rgba(5,5,5,.92), rgba(5,5,5,0)); opacity: 0; transform: translateY(14px);
+  background: linear-gradient(to top, rgba(8,6,6,.94), rgba(8,6,6,0)); opacity: 0; transform: translateY(14px);
   transition: opacity .35s, transform .35s;
 }
-.reel.is-hover .reel-meta, .reel:focus-visible .reel-meta { opacity: 1; transform: none; }
-.reel-meta b { font: 600 13px/1.2 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; color: var(--accent, #ffcc4d); }
-.reel-meta span { font: 700 27px/1.05 var(--display, sans-serif); letter-spacing: -.02em; }
-.reel-meta i { font: 500 13px/1 var(--mono, monospace); font-style: normal; opacity: .75; margin-top: 6px; }
+.reel.is-hover .reel-meta, .reel:focus-visible .reel-meta, .reel.is-front .reel-meta { opacity: 1; transform: none; }
+/* on the craft beat the card fills the screen: just a play button, the title is in the words beside it */
+.reel.is-front:not(.is-hover) .reel-meta { background: none; align-items: center; padding-bottom: 22px; }
+.reel.is-front:not(.is-hover) .reel-meta b, .reel.is-front:not(.is-hover) .reel-meta span { display: none; }
+.reel.is-front:not(.is-hover) .reel-meta i {
+  padding: 9px 16px; border-radius: 999px; background: var(--red); color: #fff; opacity: 1; font-weight: 700; letter-spacing: .08em;
+  box-shadow: 0 6px 24px rgba(227,23,10,.45);
+}
+.reel-meta b { font: 700 12px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--red); }
+.reel-meta span { font: 700 25px/1.05 var(--display); letter-spacing: -.02em; }
+.reel-meta i { font: 500 13px/1 var(--mono); font-style: normal; opacity: .8; margin-top: 6px; }
+/* the back: a red seal on the dark set */
 .reel-back {
   transform: rotateY(180deg); display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 42%, rgba(227,23,10,.16), rgba(227,23,10,0) 60%), #140e0d;
+  box-shadow: inset 0 0 0 1px rgba(239,227,200,.12), inset 0 0 0 12px #140e0d, inset 0 0 0 13px rgba(239,227,200,.18);
+}
+.reel-back span { font: 400 110px/1 "Yuji Syuku", "Shippori Mincho B1", serif; color: var(--red); opacity: .85; text-shadow: 0 0 30px var(--red-glow); }
+
+/* darken only the edges, where the words sit */
+.dh-shade {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background:
-    radial-gradient(circle at 50% 50%, rgba(18,16,20,.16) 0 1.6px, transparent 2px) 0 0 / 11px 11px,
-    var(--paper);
-  box-shadow: inset 0 0 0 1px rgba(10,10,10,.12), inset 0 0 0 12px var(--paper), inset 0 0 0 15px var(--ink);
+    linear-gradient(to top, rgba(11,9,9,.92) 0%, rgba(11,9,9,.55) 16%, rgba(11,9,9,0) 34%),
+    linear-gradient(to right, rgba(11,9,9,.75) 0%, rgba(11,9,9,0) 36%),
+    linear-gradient(to bottom, rgba(11,9,9,.6) 0%, rgba(11,9,9,0) 14%);
 }
-.reel-back span { font: 400 120px/1 "Yuji Syuku", "Shippori Mincho B1", serif; color: var(--ink); text-shadow: 0 0 0 var(--paper); }
 
-/* ---- the frame ---- */
+/* ---- part names pinned to the cards on the work beat ---- */
+.dw-tags { position: absolute; inset: 0; z-index: 3; pointer-events: none; visibility: hidden; }
+.dw-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.dw-lines polyline { fill: none; stroke: rgba(239,227,200,.55); stroke-width: 1; }
+.dw-lines circle { fill: var(--set); stroke: var(--red); stroke-width: 2; }
+.dw-tag { position: absolute; left: 0; top: 0; will-change: transform; }
+.dw-tag p { display: flex; align-items: baseline; gap: 9px; margin: 0; }
+.dw-tag[data-side="l"] { text-align: right; }
+.dw-tag[data-side="l"] p { flex-direction: row-reverse; }
+.dw-tag i { font: 700 12px/1 var(--mono); font-style: normal; color: var(--red); flex: none; }
+.dw-tag b {
+  min-width: 0; font: 600 14px/1.25 var(--body); color: var(--cream);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.dw-tag span {
+  display: block; margin-top: 4px; font: 700 10px/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--cream-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---- the frame: red corner marks and the beat's name ---- */
 .dh-frame {
-  position: absolute; z-index: 3; pointer-events: none;
-  inset: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+  position: absolute; z-index: 4; pointer-events: none;
+  inset: max(14px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
 }
-.dh-fx, .dh-fy { position: absolute; background: var(--ink); }
-.dh-fx { left: 0; right: 0; height: 1px; transform-origin: 0 50%; }
-.dh-fx.t { top: 0; } .dh-fx.b { bottom: 0; transform-origin: 100% 50%; }
-.dh-fy { top: 0; bottom: 0; width: 1px; transform-origin: 50% 0; }
-.dh-fy.l { left: 0; transform-origin: 50% 100%; } .dh-fy.r { right: 0; }
-.dh-frame::before, .dh-frame::after {
-  content: ""; position: absolute; width: 14px; height: 14px; opacity: clamp(0, (var(--ex, 1) - .7) * 3.4, 1);
-  border-color: var(--accent, #ffcc4d); border-style: solid;
+.dh-frame > i { position: absolute; width: 26px; height: 26px; border: 0 solid var(--red); }
+.dh-frame .tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+.dh-frame .tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+.dh-frame .bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+.dh-frame .br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+.dh-section {
+  position: absolute; right: clamp(16px, 3vw, 34px); top: calc(62px + env(safe-area-inset-top, 0px)); display: inline-flex; align-items: center; gap: 10px;
+  font: 700 11px/1 var(--mono); letter-spacing: .3em; text-transform: uppercase; color: var(--cream-2);
 }
-.dh-frame::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
-.dh-frame::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-.dh-tag {
-  position: absolute; top: 50%; font: 500 10.5px/1 var(--mono, monospace); letter-spacing: .2em; text-transform: uppercase;
-  color: var(--ink); background: var(--paper); padding: 10px 4px; writing-mode: vertical-rl; white-space: nowrap;
-}
-.dh-tag.l { left: -9px; transform: translateY(-50%) rotate(180deg); }
-.dh-tag.r { right: -9px; transform: translateY(-50%); }
+.dh-section i { width: 9px; height: 9px; background: var(--red); }
 
-/* ---- the headline ---- */
-.dh-copy {
-  position: absolute; z-index: 4; pointer-events: none; max-width: 980px; isolation: isolate;
-  inset-inline: clamp(22px, 5vw, 72px); bottom: calc(clamp(104px, 15vh, 150px) + env(safe-area-inset-bottom, 0px));
+/* ---- the words, one block per beat; real text over the set ---- */
+.dh-beat { position: absolute; z-index: 5; max-width: 520px; will-change: opacity, transform; }
+.dh-eyebrow {
+  display: flex; align-items: center; gap: 14px; margin: 0 0 14px; font: 700 12px/1 var(--mono); letter-spacing: .32em;
+  text-transform: uppercase; color: var(--cream-2);
 }
-.dh-copy::before {
-  content: ""; position: absolute; z-index: -1; inset: -18% -30% -22% -14%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(13,11,16,.8), rgba(13,11,16,0));
-  opacity: clamp(0, (var(--ex, 1) - .35) * 2.5, 1);
+.dh-eyebrow b { font: 700 clamp(26px, 2.6vw, 36px)/1 var(--display); letter-spacing: -.02em; color: var(--red); }
+.b-hero .dh-eyebrow b { font-size: 12px; }
+.dh-head {
+  margin: 0; font: 400 clamp(46px, 5.6vw, 92px)/.98 var(--brush); color: var(--cream); letter-spacing: -.01em;
+  text-wrap: balance;
 }
-.dh-mask { display: block; overflow: hidden; padding-bottom: .04em; }
-.dh-line { display: block; }
-.dh-status-wrap, .dh-ctas-wrap { overflow: visible; }
-.dh-status {
-  display: inline-flex; align-items: center; gap: 9px; margin-bottom: 14px; font: 500 11px/1 var(--mono, monospace);
-  letter-spacing: .14em; text-transform: uppercase; color: var(--fg-2, #d6d1d1);
-}
-.dh-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent, #ffcc4d); box-shadow: 0 0 0 4px rgba(255,204,77,.22); }
-.dh-name {
-  margin: 0; font: 800 clamp(54px, 9.6vw, 152px)/.86 var(--display, sans-serif); text-shadow: 0 6px 40px rgba(0,0,0,.45); letter-spacing: -.05em; color: #fff;
-}
-.dh-name .dh-mask:nth-child(2) .dh-line { color: var(--accent, #ffcc4d); }
-.dh-name { font-weight: 700; letter-spacing: -.045em; }
-.dh-role { display: block; margin-top: 16px; max-width: 52ch; font: 400 clamp(13px, 1.25vw, 16px)/1.55 var(--body, sans-serif); color: var(--fg-2, #d6d1d1); }
-.dh-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; pointer-events: auto; }
-.dh-ctas .btn { font: inherit; font-weight: 500; color: var(--text, #f4f0f7); cursor: pointer; }
-.dh-ctas .btn.primary { color: #1a1406; }
+.dh-head em { font-style: normal; color: var(--red); text-shadow: 0 0 18px var(--red-glow), 0 0 46px rgba(227,23,10,.28); }
+.dh-lead { margin: 0; font: 400 clamp(17px, 1.5vw, 22px)/1.45 var(--body); color: var(--cream); max-width: 30ch; }
+.dh-body { margin: 18px 0 0; font: 400 clamp(15px, 1.15vw, 18px)/1.55 var(--body); color: var(--cream-2); max-width: 40ch; }
 .dh-hint {
-  position: absolute; z-index: 4; inset-inline-end: clamp(22px, 5vw, 72px); bottom: calc(clamp(110px, 15vh, 156px) + env(safe-area-inset-bottom, 0px));
-  display: flex; gap: 12px; align-items: center; pointer-events: none;
-  font: 500 11px/1 var(--mono, monospace); letter-spacing: .18em; text-transform: uppercase; color: rgba(246,244,244,.62);
+  display: flex; align-items: center; gap: 12px; margin: 22px 0 0; font: 700 11px/1 var(--mono); letter-spacing: .26em;
+  text-transform: uppercase; color: var(--cream-3);
 }
-.dh-hint span { color: var(--accent, #ffcc4d); }
+.dh-mouse { width: 18px; height: 28px; border: 1.5px solid var(--cream-3); border-radius: 10px; position: relative; flex: none; }
+.dh-mouse::after {
+  content: ""; position: absolute; left: 50%; top: 6px; width: 2px; height: 6px; margin-left: -1px; border-radius: 2px; background: var(--red);
+  animation: dh-wheel 1.8s infinite cubic-bezier(.5, 0, .3, 1);
+}
+@keyframes dh-wheel { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(9px); opacity: 0; } 100% { opacity: 0; } }
+.dh-steps { list-style: none; margin: 22px 0 0; padding: 0; border-top: 1px solid var(--hair); }
+.dh-steps li {
+  display: flex; gap: 18px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--hair);
+  font: 500 clamp(15px, 1.2vw, 18px)/1.2 var(--body); color: var(--cream);
+}
+.dh-steps b { font: 700 15px/1 var(--display); color: var(--red); min-width: 2ch; }
+.dh-now {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 24px; padding: 10px 18px 10px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--hair); background: rgba(20,14,13,.7); color: var(--cream); font: inherit; text-align: left;
+}
+.dh-now:hover, .dh-now:focus-visible { border-color: var(--red); outline: none; }
+.dh-now i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--red); color: #fff; font-style: normal; font-size: 12px; }
+.dh-now span { display: flex; flex-direction: column; gap: 3px; font: 500 15px/1.2 var(--body); }
+.dh-now small { font: 700 10px/1 var(--mono); letter-spacing: .24em; text-transform: uppercase; color: var(--cream-3); }
+.dh-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.dh-ctas .btn { font: inherit; font-weight: 500; color: var(--cream); cursor: pointer; }
+.dh-ctas .btn.primary { color: #fff; }
+.dh-ctas .btn.ghost { background: transparent; }
 
-/* ---- the loader ---- */
+/* busy scene: the words that sit over the ring go on a dark plate */
+.b-hero, .b-talk {
+  padding: 20px 24px 22px; border-radius: 18px; background: rgba(11,9,9,.74); border: 1px solid var(--hair);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+/* where each beat's words sit on a wide screen: the copy on one side, the object on the other */
+.b-hero { left: clamp(24px, 5vw, 80px); bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+.b-craft, .b-inside { left: clamp(24px, 5vw, 80px); top: 50%; translate: 0 -50%; max-width: min(34vw, 470px); }
+.b-work { left: 50%; top: calc(86px + env(safe-area-inset-top, 0px)); translate: -50% 0; text-align: center; max-width: 720px; }
+.b-work .dh-eyebrow { justify-content: center; }
+.b-work::before {
+  content: ""; position: absolute; z-index: -1; inset: -40% -18% -50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(11,9,9,.9), rgba(11,9,9,.6) 55%, rgba(11,9,9,0));
+}
+.b-work .dh-body { margin-inline: auto; }
+.b-talk { left: 50%; bottom: calc(108px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; text-align: center; max-width: 760px; width: max-content; }
+.b-talk .dh-eyebrow, .b-talk .dh-ctas { justify-content: center; }
+.b-talk .dh-body { margin-inline: auto; }
+.dh-title { --title-y: 22%; font-size: clamp(64px, 12.5vw, 210px); }
+
+/* ---- the rail: the scroll as a timeline, one stop per beat ---- */
+.dh-rail {
+  position: absolute; z-index: 6; left: clamp(24px, 5vw, 80px); right: clamp(24px, 5vw, 80px); bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 22px;
+}
+.dh-rail-cap, .dh-count { font: 700 11px/1 var(--mono); letter-spacing: .3em; text-transform: uppercase; color: var(--cream-3); white-space: nowrap; }
+.dh-count { letter-spacing: .08em; font-size: 14px; }
+.dh-count b { color: var(--cream); }
+.dh-track { position: relative; flex: 1; height: 2px; background: var(--hair); margin-right: 18px; }
+.dh-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
+.dh-stop {
+  position: absolute; top: 50%; translate: -50% -50%; width: 34px; height: 34px; padding: 0; border: 0; background: none; cursor: pointer;
+  display: grid; place-items: center; color: inherit;
+}
+.dh-stop i { width: 11px; height: 11px; border-radius: 50%; background: var(--set); border: 2px solid var(--cream-3); transition: transform .3s, border-color .3s, background .3s; }
+.dh-stop.on i { width: 15px; height: 15px; border-color: var(--red); background: var(--set); box-shadow: 0 0 12px var(--red-glow); }
+.dh-stop:hover i, .dh-stop:focus-visible i { border-color: var(--red); transform: scale(1.2); }
+.dh-stop:focus-visible { outline: none; }
+.dh-stop span {
+  position: absolute; top: 30px; left: 50%; translate: -50% 0; font: 700 10px/1 var(--mono); letter-spacing: .24em; text-transform: uppercase;
+  color: var(--cream-3); white-space: nowrap; transition: color .3s;
+}
+.dh-stop.on span { color: var(--cream); }
+
+/* ---- the loader, on the same dark set ---- */
 .dl { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
 .dl-brand {
   position: fixed; left: 24px; top: calc(22px + env(safe-area-inset-top, 0px)); transform-origin: 0 0; white-space: nowrap;
-  font: 700 30px/1 var(--display, sans-serif); letter-spacing: -.02em; will-change: transform;
+  font: 400 38px/1 var(--brush); will-change: transform;
 }
 .dl-ui { position: absolute; inset: 0; }
 .dl-skip {
   position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 18px; pointer-events: auto; cursor: pointer;
   display: inline-flex; align-items: center; gap: 10px; padding: 9px 12px 9px 15px; border-radius: 999px;
-  border: 1px solid rgba(10,10,10,.16); background: rgba(255,255,255,.75); color: #0a0a0a;
-  font: 500 11px/1 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase;
+  border: 1px solid var(--hair); background: rgba(20,14,13,.75); color: var(--cream);
+  font: 700 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
 }
-.dl-skip:hover, .dl-skip:focus-visible { border-color: var(--accent, #ffcc4d); outline: none; }
-.dl-skip kbd { font: inherit; font-size: 10px; padding: 4px 6px; border-radius: 6px; background: rgba(10,10,10,.07); }
-.dl-meter { position: absolute; right: clamp(18px, 3vw, 40px); bottom: calc(clamp(14px, 3vh, 34px) + env(safe-area-inset-bottom, 0px)); text-align: right; color: #0a0a0a; }
-.dl-cap {
-  display: flex; justify-content: flex-end; gap: 14px; margin-bottom: 4px; padding-right: .5em;
-  font: 500 11px/1 var(--mono, monospace); letter-spacing: .16em; text-transform: uppercase;
-}
-.dl-of { color: #9a9a9a; }
-.dl-count {
-  display: flex; justify-content: flex-end; font: 400 clamp(84px, 17vw, 236px)/1 var(--mono, monospace);
-  font-variant-numeric: tabular-nums; letter-spacing: -.07em;
-}
+.dl-skip:hover, .dl-skip:focus-visible { border-color: var(--red); outline: none; }
+.dl-skip kbd { font: inherit; font-size: 10px; padding: 4px 6px; border-radius: 6px; background: rgba(239,227,200,.08); }
+.dl-meter { position: absolute; right: clamp(18px, 3vw, 40px); bottom: calc(clamp(14px, 3vh, 34px) + env(safe-area-inset-bottom, 0px)); text-align: right; color: var(--cream); }
+.dl-cap { display: flex; justify-content: flex-end; gap: 14px; margin-bottom: 4px; padding-right: .5em; font: 700 11px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; }
+.dl-cap-text { color: var(--red); }
+.dl-of { color: var(--cream-3); }
+.dl-count { display: flex; justify-content: flex-end; font: 400 clamp(84px, 17vw, 236px)/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.07em; }
 .dl-col { display: inline-block; height: 1em; overflow: hidden; transition: color .4s; }
-.dl-col.is-lead { color: #dcdcdc; }
+.dl-col.is-lead { color: rgba(239,227,200,.14); }
 .dl-strip { display: flex; flex-direction: column; transition: transform .85s cubic-bezier(.16, 1, .3, 1); }
 .dl-strip span { display: block; height: 1em; }
 
+/* ---- phones held upright: the object on top, smaller; the words under it ---- */
 @media (max-aspect-ratio: 5/6) {
-  .dw-stage { --ring-y: calc(33% + 3% * var(--ex, 1)); }
+  .dh-title { --title-y: 21%; font-size: clamp(56px, 21vw, 150px); }
+  .dh-section, .dh-hint-touch, .b-craft .dh-body { display: none; }
+  .b-hero .dh-eyebrow { letter-spacing: .16em; }
+  .dh-beat, .b-craft, .b-inside, .b-work, .b-talk, .b-hero {
+    left: 22px; right: 22px; top: auto; bottom: calc(82px + env(safe-area-inset-bottom, 0px)); translate: none;
+    max-width: none; width: auto; text-align: left;
+  }
+  .b-work .dh-eyebrow, .b-talk .dh-eyebrow, .b-talk .dh-ctas { justify-content: flex-start; }
+  .b-work .dh-body, .b-talk .dh-body { margin-inline: 0; }
+  .dh-head { font-size: clamp(38px, 11vw, 64px); }
+  .dh-eyebrow { margin-bottom: 10px; letter-spacing: .26em; }
+  .dh-eyebrow b { font-size: 24px; }
+  .dh-body { margin-top: 10px; font-size: 14.5px; }
+  .dh-steps { margin-top: 12px; columns: 2; column-gap: 18px; border-top: 0; }
+  .dh-steps li { padding: 7px 0; font-size: 14px; break-inside: avoid; }
+  .dh-now { margin-top: 12px; }
+  .dh-ctas { margin-top: 14px; }
+  .dh-shade {
+    background:
+      linear-gradient(to top, rgba(11,9,9,.97) 0%, rgba(11,9,9,.86) 30%, rgba(11,9,9,0) 52%),
+      linear-gradient(to bottom, rgba(11,9,9,.6) 0%, rgba(11,9,9,0) 12%);
+  }
+  .dh-rail { gap: 12px; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+  .dh-rail-cap { display: none; }
+  .dh-stop span { display: none; }
+  .dh-section { top: calc(60px + env(safe-area-inset-top, 0px)); letter-spacing: .22em; }
 }
 @media (max-width: 760px) {
-  .dh-hint { inset-inline-end: auto; inset-inline-start: clamp(22px, 5vw, 72px); bottom: auto; top: calc(78px + env(safe-area-inset-top, 0px)); }
-  .dh-copy { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
-  .dh-tag { display: none; }
-  .dl-brand { left: 18px; font-size: 24px; }
+  .dl-brand { left: 18px; font-size: 30px; }
+  .dh-frame > i { width: 18px; height: 18px; }
+}
+@media (max-height: 560px) and (min-aspect-ratio: 5/6) {
+  .dh-head { font-size: 40px; }
+  .dh-steps li { padding: 6px 0; }
+  .b-hero .dh-hint { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .reel-meta, .reel-video, .reel-face::after { transition: none; }
+  .reel-meta, .reel-video, .reel-face::after, .dh-stop i { transition: none; }
+  .dh-mouse::after { animation: none; }
 }

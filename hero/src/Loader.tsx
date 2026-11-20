@@ -94,11 +94,11 @@ interface LoaderProps {
   onSkip: () => void;
 }
 
-/** The loader's UI. Its backdrop is the hero's white layer, so the cards keep moving while it clears. */
+/** The loader's UI, over the hero's dark set, so the cards keep moving while it clears. */
 export function Loader({ expansion, progress, loaded, total, brand, caption, skipLabel, onSkip }: LoaderProps) {
   const ui = useTransform(expansion, [0, 0.16], [1, 0]);
   const flight = useTransform(expansion, [0, 0.55], [0, 1]);
-  const ink = useTransform(expansion, [0, 0.3], ["#0a0a0a", "#f6f4f4"]);
+  const ink = useTransform(expansion, [0, 1], ["#efe3c8", "#efe3c8"]);
   const pct = Math.round(progress * 100);
   return (
     <div className="dl">

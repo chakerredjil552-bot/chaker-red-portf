@@ -10,10 +10,9 @@
 <meta property="og:image" content="thumbs/duo-chocolate.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&text=%E6%AD%A6&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="hero-assets/bg-run.jpg">
-<link rel="stylesheet" href="hero-assets/deal-hero.css?v=5">
+<link rel="stylesheet" href="hero-assets/deal-hero.css?v=6">
 <script>
   // the reel ring's entrance owns the first seconds, unless motion is reduced or the link points at one video
   if (!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) && (location.hash.length < 2 || location.hash === "#top")) {
@@ -24,8 +23,8 @@
 </script>
 <style>
   :root {
-    --bg: #0d0b10; --panel: #17141c; --line: #2a2531; --text: #f4f0f7; --muted: #a39cab;
-    --accent: #ffcc4d; --accent2: #c86bff;
+    --bg: #0b0909; --panel: #171110; --line: #2e2422; --text: #f2e9d6; --muted: #a8998a;
+    --accent: #e3170a; --accent2: #ff6a3d;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -56,7 +55,7 @@
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; text-decoration: none;
     font-weight: 500; border: 1px solid var(--line); background: var(--panel); transition: transform .2s, border-color .2s; }
   .btn:hover { transform: translateY(-2px); border-color: var(--accent); }
-  .btn.primary { background: var(--accent); color: #1a1406; border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn svg { width: 18px; height: 18px; }
 
   .bar { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0 20px; color: var(--muted); }
@@ -66,7 +65,7 @@
   .filter { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 999px;
     border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; transition: border-color .2s, color .2s; }
   .filter:hover { border-color: var(--accent2); color: var(--text); }
-  .filter.on { background: var(--accent); border-color: var(--accent); color: #1a1406; }
+  .filter.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .filter .n { opacity: .7; }
   .shape { display: inline-block; border: 1.5px solid currentColor; border-radius: 3px; }
   .shape.v { width: 9px; height: 15px; } .shape.h { width: 16px; height: 9px; }
@@ -78,7 +77,7 @@
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
     opacity: 0; transform: translateY(18px); animation: rise .6s cubic-bezier(.2,.8,.2,1) forwards; }
   @keyframes rise { to { opacity: 1; transform: none; } }
-  .card.hit { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,204,77,.25); }
+  .card.hit { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(227,23,10,.25); }
   .thumb { position: relative; display: block; width: 100%; aspect-ratio: 9 / 16; background: #000; border: 0; padding: 0; cursor: pointer; overflow: hidden; }
   .thumb img, .thumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
   .thumb video { opacity: 0; transition: opacity .3s; }
@@ -122,7 +121,7 @@
   .nav.prev { left: 18px; } .nav.next { right: 18px; }
   .pbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
   .msg { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; text-decoration: none; font-weight: 500; font-size: 14px;
-    background: var(--accent); color: #1a1406; }
+    background: var(--accent); color: #fff; }
   .msg.wa { background: #25d366; color: #fff; }
   .msg svg { width: 18px; height: 18px; }
   .close { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
@@ -137,7 +136,7 @@
   .cta-link { display: flex; align-items: center; gap: 14px; min-width: 260px; padding: 14px 20px 14px 14px; border-radius: 18px;
     text-decoration: none; text-align: left; border: 1px solid var(--line); background: var(--bg); transition: transform .2s, border-color .2s; }
   .cta-link:hover { transform: translateY(-3px); border-color: var(--accent); }
-  .cta-link .ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: #1a1406; }
+  .cta-link .ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: #fff; }
   .cta-link.wa .ic { background: #25d366; color: #fff; }
   .cta-link.wa:hover { border-color: #25d366; }
   .cta-link svg { width: 22px; height: 22px; }
@@ -177,7 +176,7 @@
     .nav.prev { left: 6px; } .nav.next { right: 6px; }
   }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .3s;
-    background: var(--accent); color: #1a1406; padding: 10px 16px; border-radius: 10px; font-weight: 500; z-index: 50; }
+    background: var(--accent); color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 500; z-index: 50; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { .card { animation: none; opacity: 1; transform: none; } }
 </style>
@@ -393,6 +392,6 @@
   fromHash();
   addEventListener("hashchange", fromHash);
 </script>
-<script src="hero-assets/deal-hero.js?v=4"></script>
+<script src="hero-assets/deal-hero.js?v=5"></script>
 </body>
 </html>

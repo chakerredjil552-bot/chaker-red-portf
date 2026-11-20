@@ -1,57 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { animate, m, useMotionValue, useTransform, type AnimationPlaybackControls, type MotionValue } from "framer-motion";
-import { SLOTS, SMALL, facing, reelPose, slotAngle, slotReel } from "./pose.ts";
+import { animate, m, useMotionValue, useMotionValueEvent, useTransform, type AnimationPlaybackControls, type MotionValue } from "framer-motion";
+import { SLOTS, facing, reelPose, slotAngle, slotReel, type Scene } from "./pose.ts";
+import { CUES, beatAt, beatTarget, beatWeight, shotAt } from "./story.ts";
 import { REELS, type Reel } from "./reels.ts";
 import { COPY } from "./copy.ts";
 import { Loader } from "./Loader.tsx";
-import { Wall } from "./Wall.tsx";
+import { Wall, type Timeline } from "./Wall.tsx";
 
 const FORMATION_S = 2.6;
-const EXPANSION_S = 1.9;
-const EXPANSION_EASE = [0.5, 0, 0.15, 1] as const;
+const REVEAL_S = 1.5;
+const REVEAL_EASE = [0.5, 0, 0.15, 1] as const;
 /** If the network never delivers, the reveal goes ahead this long after the deal has finished. */
 const PATIENCE_MS = 4500;
-const BACKDROP = "hero-assets/bg-run.mp4", BACKDROP_REVERSED = "hero-assets/bg-run-rev.mp4", BACKDROP_POSTER = "hero-assets/bg-run.jpg";
-
-/**
- * The backdrop runs with the ring: forward while the cards drift or are sent right, backward while they are sent left,
- * faster the faster they turn. Browsers cannot play a video backwards, so a reversed copy takes over at the mirrored
- * moment; both decode natively, so nothing is drawn by hand.
- */
-function useBackdrop(reduced: boolean) {
-  const fwd = useRef<HTMLVideoElement>(null), rev = useRef<HTMLVideoElement>(null);
-  const st = useRef({ dir: 1, switching: false, rate: 1 });
-  useEffect(() => {
-    const f = fwd.current, r = rev.current;
-    if (!f || !r || reduced) return;
-    // the reversed copy loads once the forward one is in, so the start stays light
-    const later = () => { r.preload = "auto"; r.load(); };
-    if (f.readyState >= 4) later(); else f.addEventListener("canplaythrough", later, { once: true });
-    return () => f.removeEventListener("canplaythrough", later);
-  }, [reduced]);
-  const onTurn = useCallback((v: number) => {
-    const f = fwd.current, r = rev.current, s = st.current;
-    if (!f || !r || reduced) return;
-    // the idle spin is about -3.4 deg/s: that is running forward at normal speed
-    const want = v > 5 ? -1 : v < -1 ? 1 : s.dir;
-    const from = s.dir === 1 ? f : r, to = s.dir === 1 ? r : f;
-    if (want !== s.dir && !s.switching && to.readyState >= 2 && from.duration) {
-      s.switching = true;
-      const t = from.duration - from.currentTime;
-      to.currentTime = Math.max(0, Math.min(to.duration - 0.05, t));
-      to.playbackRate = from.playbackRate;
-      const show = () => {
-        to.classList.add("on"); from.classList.remove("on"); from.pause();
-        s.dir = want; s.switching = false;
-      };
-      to.play().then(() => requestAnimationFrame(show)).catch(() => { s.switching = false; });
-    }
-    const active = s.dir === 1 ? f : r;
-    const rate = Math.round(Math.max(1, Math.min(3, Math.abs(v) / 14)) * 10) / 10;
-    if (rate !== s.rate) { s.rate = rate; active.playbackRate = rate; }
-  }, [reduced]);
-  return { fwd, rev, onTurn };
-}
 
 const html = document.documentElement;
 const SCROLL_KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
@@ -60,20 +20,11 @@ const SCROLL_KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", 
 function frontReels(): Set<string> {
   const ids = new Set<string>();
   if (!REELS.length) return ids;
+  const hero = shotAt(0);
+  const scene: Scene = { ...hero };
   for (let s = 0; s < SLOTS; s++)
-    if (facing(reelPose(slotAngle(s, 0), 1, SMALL), SMALL)) ids.add(REELS[slotReel(s, 0, REELS.length)].key);
+    if (facing(reelPose(slotAngle(s, 0), 1, scene), scene)) ids.add(REELS[slotReel(s, 0, REELS.length)].key);
   return ids;
-}
-
-/** A line of the headline that rises out of a mask as `mv` goes from `from` to `to`. */
-function Rise({ mv, from, to, children, className }: { mv: MotionValue<number>; from: number; to: number; children: ReactNode; className?: string }) {
-  const t = useTransform(mv, [from, to], [0, 1]);
-  const y = useTransform(t, (v) => `${(1 - v) * 105}%`);
-  return (
-    <span className={"dh-mask " + (className ?? "")}>
-      <m.span className="dh-line" style={{ y, opacity: t }}>{children}</m.span>
-    </span>
-  );
 }
 
 const play = (reel: Reel) => {
@@ -81,21 +32,51 @@ const play = (reel: Reel) => {
   else location.hash = reel.videoId;
 };
 
+/** How much beat `i`'s words show: on the beat, once the entrance is over. */
+function useBeat(progress: MotionValue<number>, reveal: MotionValue<number>, i: number) {
+  const w = useTransform([progress, reveal], ([u, r]: number[]) => beatWeight(u, i) * Math.min(1, Math.max(0, (r - 0.35) / 0.65)));
+  const y = useTransform(w, (v) => `${(1 - v) * 22}px`);
+  const visibility = useTransform(w, (v) => (v > 0.001 ? "visible" : "hidden"));
+  const pointerEvents = useTransform(w, (v) => (v > 0.5 ? "auto" : "none"));
+  return { opacity: w, y, visibility, pointerEvents } as const;
+}
+
+/** A headline in the brush face: the middle part glows red. */
+function Head({ parts, n }: { parts: string[]; n?: number }) {
+  const fill = (s: string) => s.replace("{n}", String(n ?? ""));
+  return (
+    <h2 className="dh-head">
+      {fill(parts[0])}<em>{fill(parts[1])}</em>{fill(parts[2])}
+    </h2>
+  );
+}
+
+function Beat({ i, progress, reveal, className, children }: { i: number; progress: MotionValue<number>; reveal: MotionValue<number>; className: string; children: ReactNode }) {
+  const style = useBeat(progress, reveal, i);
+  return <m.div className={"dh-beat " + className} style={style}>{children}</m.div>;
+}
+
+function Eyebrow({ no, label }: { no: string; label: string }) {
+  return <p className="dh-eyebrow"><b>{no}</b>{label}</p>;
+}
+
 export function DealHero() {
   const reduced = useMemo(() => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches, []);
   // a shared link to one video (#video-id) goes straight to it, so does the reduced-motion visitor
   const instant = reduced || (location.hash.length > 1 && location.hash !== "#top");
 
-  // the two values that drive everything
   const formation = useMotionValue(instant ? 1 : 0);
-  const expansion = useMotionValue(instant ? 1 : 0);
+  const reveal = useMotionValue(instant ? 1 : 0);
+  const progress = useMotionValue(0);
+  const timeline = useRef<Timeline>({ target: 0, lastInput: 0 });
 
   const [entering, setEntering] = useState(!instant);
   const [formed, setFormed] = useState(instant);
   const [late, setLate] = useState(false);
+  const [beat, setBeat] = useState(0);
+  const [frontReel, setFrontReel] = useState(0);
   const pin = useRef<HTMLDivElement>(null);
   const runs = useRef<AnimationPlaybackControls[]>([]);
-  const backdrop = useBackdrop(reduced);
   const started = useRef(instant);
 
   // real progress: which of the front covers and previews have arrived
@@ -120,17 +101,22 @@ export function DealHero() {
     runs.current.forEach((r) => r.stop());
     started.current = true;
     formation.set(1);
-    expansion.set(1);
+    reveal.set(1);
     setFormed(true);
     finish();
-  }, [expansion, finish, formation]);
+  }, [reveal, finish, formation]);
 
   // --ex on <html> lets the page's top bar arrive with the reveal
   useLayoutEffect(() => {
     const put = (v: number) => html.style.setProperty("--ex", v.toFixed(3));
-    put(expansion.get());
-    return expansion.on("change", put);
-  }, [expansion]);
+    put(reveal.get());
+    return reveal.on("change", put);
+  }, [reveal]);
+
+  useMotionValueEvent(progress, "change", (u) => {
+    const b = beatAt(u);
+    if (b !== beat) setBeat(b);
+  });
 
   // formation: the deal, linear
   useEffect(() => {
@@ -150,14 +136,14 @@ export function DealHero() {
     return () => clearTimeout(t);
   }, [formed, ready, instant]);
 
-  // expansion: only once the deal is done AND the assets are in, whichever is later
+  // reveal: only once the deal is done AND the assets are in, whichever is later
   useEffect(() => {
     if (!formed || !ready || started.current) return;
     started.current = true;
-    const run = animate(expansion, 1, { duration: EXPANSION_S, ease: EXPANSION_EASE });
+    const run = animate(reveal, 1, { duration: REVEAL_S, ease: REVEAL_EASE });
     runs.current.push(run);
     run.then(finish);
-  }, [expansion, finish, formed, ready]);
+  }, [reveal, finish, formed, ready]);
 
   // while the entrance plays: no scrolling; Escape and Tab end it at once
   useEffect(() => {
@@ -165,7 +151,6 @@ export function DealHero() {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") { skip(); return; }
       if (e.key === "Tab") {
-        // the skip button goes away with the loader: start the visitor's tabbing at the top of the page
         e.preventDefault();
         skip();
         requestAnimationFrame(() => document.querySelector<HTMLElement>(".topbar a[href]:not([tabindex='-1']), .topbar button")?.focus());
@@ -184,64 +169,110 @@ export function DealHero() {
     };
   }, [entering, skip]);
 
-  // the reveal, all read off expansion so nothing is queued: it overlaps the cards still settling
-  const white = useTransform(expansion, [0, 0.42], [1, 0]);
-  const shade = useTransform(expansion, [0.25, 0.9], [0, 1]);
-  const skyScale = useTransform(expansion, [0, 1], [1.16, 1]);
-  const frameX = useTransform(expansion, [0.3, 0.8], [0, 1]);
-  const frameY = useTransform(expansion, [0.4, 0.9], [0, 1]);
-  const labels = useTransform(expansion, [0.7, 1], [0, 1]);
+  const goTo = (i: number) => {
+    const t = timeline.current;
+    t.target = beatTarget(t.target, i);
+    t.lastInput = performance.now();
+  };
+
+  // the name behind the ring, and the rail's fill
+  const titleOn = useTransform([progress, reveal], ([u, r]: number[]) => beatWeight(u, 0, 0.05, 0.08) * Math.min(1, r * 1.6));
+  const titleY = useTransform(titleOn, (v) => `${(1 - v) * 6}%`);
+  const fill = useTransform(progress, (u) => `${(((u % 1) + 1) % 1) * 100}%`);
+  const chrome = useTransform(reveal, [0.4, 1], [0, 1]);
 
   const wa = window.CONTACT?.whatsapp;
-  const videos = window.VIDEOS?.length ?? 0;
   const email = window.CONTACT?.email;
+  const videos = window.VIDEOS ?? [];
+  const now = REELS[frontReel];
+  const B = COPY.beats;
+  const watchFirst = () => { if (videos[0]) window.openVideo?.(videos[0].id); };
 
   return (
     <>
       <div ref={pin} id="top" className="dh-pin">
         <section className="dh" aria-label={COPY.name}>
-          <m.div className="dh-sky" style={{ scale: skyScale }} aria-hidden="true">
-            <video ref={backdrop.fwd} className="dh-bgvid on" src={BACKDROP} poster={BACKDROP_POSTER} muted loop playsInline autoPlay={!reduced} preload="auto" disablePictureInPicture tabIndex={-1} />
-            <video ref={backdrop.rev} className="dh-bgvid" src={BACKDROP_REVERSED} muted loop playsInline preload="none" disablePictureInPicture tabIndex={-1} />
+          <div className="dh-set" aria-hidden="true" />
+          <m.div className="dh-title" style={{ opacity: titleOn, y: titleY }} aria-hidden="true">
+            <span>{COPY.first}</span> <em>{COPY.last}</em>
           </m.div>
-          <m.div className="dh-white" style={{ opacity: white }} aria-hidden="true" />
           <Wall
-            reels={REELS} formation={formation} expansion={expansion} locked={entering} reduced={reduced}
-            preload={preload} onAsset={onAsset} onOpen={play} section={pin} playLabel={COPY.play} onTurn={backdrop.onTurn}
+            reels={REELS} formation={formation} reveal={reveal} progress={progress} timeline={timeline}
+            locked={entering} reduced={reduced} preload={preload} onAsset={onAsset} onOpen={play} onFront={setFrontReel}
+            section={pin} playLabel={COPY.play}
           />
-          <m.div className="dh-shade" style={{ opacity: shade }} aria-hidden="true" />
+          <div className="dh-shade" aria-hidden="true" />
 
-          <div className="dh-frame" aria-hidden="true">
-            <m.i className="dh-fx t" style={{ scaleX: frameX }} />
-            <m.i className="dh-fx b" style={{ scaleX: frameX }} />
-            <m.i className="dh-fy l" style={{ scaleY: frameY }} />
-            <m.i className="dh-fy r" style={{ scaleY: frameY }} />
-            <m.span className="dh-tag l" style={{ opacity: labels }}>{COPY.tagLeft} — {videos} videos</m.span>
-            <m.span className="dh-tag r" style={{ opacity: labels }}>{COPY.tagRight}</m.span>
-          </div>
+          <m.div className="dh-frame" style={{ opacity: chrome }} aria-hidden="true">
+            <i className="tl" /><i className="tr" /><i className="bl" /><i className="br" />
+            <span className="dh-section"><i />{B[CUES[beat].id].label}</span>
+          </m.div>
 
-          <div className="dh-copy">
-            <Rise mv={expansion} from={0.42} to={0.8} className="dh-status-wrap"><span className="dh-status"><i />{COPY.nick}</span></Rise>
-            <h1 className="dh-name">
-              {COPY.name.split(" ").map((w, i) => (
-                <Rise key={i + w} mv={expansion} from={0.45 + i * 0.07} to={0.88 + i * 0.05}>{w}</Rise>
+          <Beat i={0} progress={progress} reveal={reveal} className="b-hero">
+            <h1 className="sr-only">{COPY.name} — {COPY.portfolio}</h1>
+            <p className="dh-eyebrow"><b>■</b>{COPY.role}</p>
+            <p className="dh-lead">{COPY.lead}</p>
+            <p className="dh-hint"><span className="dh-mouse" aria-hidden="true" />{COPY.hint}<span className="dh-hint-touch"> · {COPY.touch}</span></p>
+          </Beat>
+
+          <Beat i={1} progress={progress} reveal={reveal} className="b-craft">
+            <Eyebrow no={B.craft.no} label={B.craft.label} />
+            <Head parts={B.craft.head} />
+            <p className="dh-body">{B.craft.body}</p>
+            {now && (
+              <button type="button" className="dh-now" onClick={() => play(now)}>
+                <i aria-hidden="true">▶</i>
+                <span><small>{B.craft.now}</small>{now.title}</span>
+              </button>
+            )}
+          </Beat>
+
+          <Beat i={2} progress={progress} reveal={reveal} className="b-inside">
+            <Eyebrow no={B.inside.no} label={B.inside.label} />
+            <Head parts={B.inside.head} />
+            <ol className="dh-steps">
+              {B.inside.steps.map((s, i) => <li key={s}><b>{String(i + 1).padStart(2, "0")}</b>{s}</li>)}
+            </ol>
+          </Beat>
+
+          <Beat i={3} progress={progress} reveal={reveal} className="b-work">
+            <Eyebrow no={B.work.no} label={B.work.label} />
+            <Head parts={B.work.head} n={videos.length} />
+            <p className="dh-body">{B.work.body}</p>
+          </Beat>
+
+          <Beat i={4} progress={progress} reveal={reveal} className="b-talk">
+            <Eyebrow no={B.talk.no} label={B.talk.label} />
+            <Head parts={B.talk.head} />
+            <p className="dh-body">{B.talk.body}</p>
+            <div className="dh-ctas">
+              {wa && <a className="btn primary" href={`https://wa.me/${wa}`} target="_blank" rel="noopener">{COPY.whatsapp}</a>}
+              {email && <a className="btn" href={`mailto:${email}`}>{COPY.email}</a>}
+              {videos.length > 0 && <button type="button" className="btn ghost" onClick={watchFirst}>▶ {COPY.watch}</button>}
+            </div>
+          </Beat>
+
+          <m.nav className="dh-rail" style={{ opacity: chrome }} aria-label="Story">
+            <span className="dh-rail-cap">Scroll</span>
+            <div className="dh-track">
+              <m.i className="dh-fill" style={{ width: fill }} />
+              {CUES.map((c, i) => (
+                <button
+                  key={c.id} type="button" className={"dh-stop" + (i === beat ? " on" : "")} style={{ left: `${c.at * 100}%` }}
+                  onClick={() => goTo(i)} aria-label={B[c.id].label} aria-current={i === beat ? "step" : undefined}
+                >
+                  <i /><span>{c.name}</span>
+                </button>
               ))}
-            </h1>
-            <Rise mv={expansion} from={0.58} to={0.95} className="dh-role-wrap"><span className="dh-role">{COPY.lead}</span></Rise>
-            <Rise mv={expansion} from={0.64} to={1} className="dh-ctas-wrap">
-              <span className="dh-ctas">
-                {email && <a className="btn primary" href={`mailto:${email}`}>{COPY.email}</a>}
-                {wa && <a className="btn" href={`https://wa.me/${wa}`} target="_blank" rel="noopener">{COPY.whatsapp}</a>}
-              </span>
-            </Rise>
-          </div>
-          <m.div className="dh-hint" style={{ opacity: labels }} aria-hidden="true"><span>←</span>{COPY.drag}<span>→</span></m.div>
+            </div>
+            <span className="dh-count"><b>{String(beat + 1).padStart(2, "0")}</b> / {String(CUES.length).padStart(2, "0")}</span>
+          </m.nav>
         </section>
       </div>
 
       {entering && (
         <Loader
-          expansion={expansion} progress={total ? loaded / total : 1} loaded={loaded} total={total}
+          expansion={reveal} progress={total ? loaded / total : 1} loaded={loaded} total={total}
           brand={COPY.brand} caption={COPY.loading} skipLabel={COPY.skip} onSkip={skip}
         />
       )}

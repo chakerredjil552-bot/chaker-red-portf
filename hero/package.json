@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test src/pose.test.ts",
+    "test": "node --test src/pose.test.ts src/story.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs"
   },
