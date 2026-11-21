@@ -140,7 +140,7 @@ test("he stands with his back to the camera, facing the wall", () => {
   assert.ok((f[0] * view[0] + f[1] * view[1]) / Math.hypot(view[0], view[1]) > 0.99, "he faces the wall");
 });
 
-test("the screen in front floats just in front of him and over him, covering only the top of his head", () => {
+test("the screen in front floats just in front of him and over him, never in front of his head", () => {
   for (const aspect of [16 / 9, 4 / 3, 0.46, 0.75]) {
     const shot = roomShot(0, aspect), [, cy, cz] = shot.pos;
     const angle = (y: number, z: number) => Math.atan2(y - cy, cz - z);
@@ -154,9 +154,9 @@ test("the screen in front floats just in front of him and over him, covering onl
       assert.ok(Math.atan2((w * f.scale) / 2, cz - f.z) < halfW * 0.9, `aspect ${aspect.toFixed(2)}: wider than the picture`);
       const bottom = f.y - (h * f.scale) / 2, top = f.y + (h * f.scale) / 2;
       assert.ok(f.z > MAN_AT[2], "nearer the camera than he is, so it can cover him");
-      // its bottom edge is over his head, a little below the top of it, never down at his shoulders
-      assert.ok(angle(bottom, f.z) < angle(HEAD_TOP, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it does not reach his head`);
-      assert.ok(angle(bottom, f.z) > angle(HEAD_TOP - 0.3, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it covers his face`);
+      // its bottom edge is just over his head: never in front of it, not far above it
+      assert.ok(angle(bottom, f.z) > angle(HEAD_TOP, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it covers his head`);
+      assert.ok(angle(bottom, f.z) < angle(HEAD_TOP + 0.3, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it floats far above him`);
       assert.ok(angle(top, f.z) < pitch + half - 0.03, `aspect ${aspect.toFixed(2)}, height ${h}: the screen leaves the picture`);
       assert.ok(f.scale > 0.55 && f.scale <= 1, `aspect ${aspect.toFixed(2)}, height ${h}: shrunk to ${f.scale.toFixed(2)}`);
     }

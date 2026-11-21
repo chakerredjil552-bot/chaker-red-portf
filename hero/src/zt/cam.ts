@@ -43,12 +43,12 @@ export const MAN_SCALE = 1.35;
 export const HEAD_TOP = 1.86 * MAN_SCALE;
 /** The height where the bottom of the room picture cuts him (mid-shin). */
 export const SHIN_CUT = 0.42;
-/** How much of the top of his head the screen covers, metres. */
-export const HEAD_COVER = 0.2;
+/** The gap between the top of his head and the screen's bottom edge, metres (seen from the camera, at his depth). */
+export const HEAD_GAP = 0.08;
 
 /** The screen in front of him, in the room's own frame: its centre height, its distance (z) and how much to shrink it.
- *  It floats a little nearer the camera than he stands, just over him, its bottom edge covering the top of his head a
- *  little; its top stays in the picture, under the top bar. */
+ *  It floats a little nearer the camera than he stands, just over him, its bottom edge just clear of his head; its top
+ *  stays in the picture, under the top bar. */
 export function frontScreen(aspect: number, w: number, h: number): { y: number; z: number; scale: number } {
   const tall = aspect < 1;
   const shot = roomShot(0, aspect);
@@ -57,8 +57,9 @@ export function frontScreen(aspect: number, w: number, h: number): { y: number; 
   // just off his back, a little nearer the camera than he stands
   const z = MAN_AT[2] + 0.6;
   const depth = cz - z;
-  // seen from the camera: the angle a little under the top of his head, and the highest angle well inside the frame
-  const head = Math.atan2(HEAD_TOP - HEAD_COVER - cy, cz - MAN_AT[2]);
+  // seen from the camera: the angle just over the top of his head (it never covers him), and the highest angle well
+  // inside the frame
+  const head = Math.atan2(HEAD_TOP + HEAD_GAP - cy, cz - MAN_AT[2]);
   const top = (fovFor(true, aspect) / 2) * DEG - 0.045;
   const bottom = cy + Math.tan(head) * depth, ceiling = cy + Math.tan(top + pitch) * depth;
   const room = ceiling - bottom;

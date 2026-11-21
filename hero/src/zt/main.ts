@@ -12,6 +12,7 @@ import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
 import { Man, cover, wonder } from "./man.ts";
 import { Dust } from "./dust.ts";
+import { Beam } from "./beam.ts";
 import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
 
@@ -21,7 +22,7 @@ const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matche
 const BG = new THREE.Color("#0c0a0b");
 const BG_END = new THREE.Color("#1d0d11");
 /** The light that throws his long shadow: from high up, behind and to the right, so it falls toward the front left. */
-const LIGHT = new THREE.Vector3(-0.55, -1, 0.42);
+const LIGHT = new THREE.Vector3(-0.55, -0.5, 0.42);
 /** Where this script was loaded from: the model of the man sits next to it. */
 const HERE = (document.currentScript as HTMLScriptElement | null)?.src || location.href;
 
@@ -97,7 +98,9 @@ function start() {
   const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
   // white specks floating in the air of the well
   const dust = new Dust(phone ? 340 : 680);
-  scene.add(wall.mesh, floor, man.group, dust.points);
+  // the light from above that comes down onto him as the camera locks on
+  const beam = new Beam();
+  scene.add(wall.mesh, floor, man.group, dust.points, beam.group);
   const post = new Post(renderer, phone ? 0.22 : 0.3, phone);
 
   // two video elements: the one on the screen, and the next one, loaded during the swap
@@ -262,7 +265,11 @@ function start() {
     const lit = stage.name === "land" ? 1 - smoother((stage.t - 0.84) / 0.12) : stage.name === "room" ? 0
       : stage.name === "exit" ? smoother((stage.t - 0.35) / 0.35) : 1;
     man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, eased * 0.9), 0.5 * lit);
-    man.flash(stage.name === "land" ? 2.2 * band(stage.t, 0.76, 0.84, 0.86, 0.97) : 0);
+    // the light from above: it comes down as the camera locks onto him, flares, then stays, softer, in the room
+    const beamOn = stage.name === "land" ? smoother((stage.t - 0.74) / 0.12) : stage.name === "room" ? 1
+      : stage.name === "exit" ? 1 - smoother((stage.t - 0.1) / 0.3) : 0;
+    const flare = stage.name === "land" ? band(stage.t, 0.76, 0.84, 0.88, 1) : 0;
+    beam.update(fig.x, fig.z, beamOn * 0.8 + flare * 1.0, clock.t);
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
