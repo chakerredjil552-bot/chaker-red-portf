@@ -46,14 +46,16 @@ const WONDER: [number, number, number][] = [
   [9.7, -1.85, 0.03], [11.2, -1.88, 0.02], [13.4, 0, 0], [15.4, 1.85, 0.03], [16.9, 1.88, 0.02], [18.9, 0, 0],
   [19.9, 0, 0],
 ];
+/** How much faster than the table he plays it: each turn takes a little over a second. */
+export const WONDER_PACE = 1.7;
 /** Seconds before the pattern repeats. */
-export const WONDER_PERIOD = WONDER[WONDER.length - 1][0];
+export const WONDER_PERIOD = WONDER[WONDER.length - 1][0] / WONDER_PACE;
 /** Seconds the shoulders and upper body take to catch up with the head. */
-const FOLLOW = 0.55;
+const FOLLOW = 0.33;
 
 export function wonder(t: number): { look: number; lift: number } {
   const T = WONDER[WONDER.length - 1][0];
-  const u = ((t % T) + T) % T;
+  const u = (((t * WONDER_PACE) % T) + T) % T;
   let i = 0;
   while (i < WONDER.length - 2 && WONDER[i + 1][0] <= u) i++;
   const [t0, l0, p0] = WONDER[i], [t1, l1, p1] = WONDER[i + 1];
