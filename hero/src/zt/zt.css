@@ -2,7 +2,9 @@
 
 :root { --serif: "Bodoni Moda", "Didot", "Bodoni 72", "Times New Roman", serif; --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; }
 
-html.zt-on { scroll-snap-type: y proximity; background: #0c0a0b; }
+html.zt-on { background: #0c0a0b; }
+/* the page settles on each video, only in the room (main.ts turns it on there) */
+html.zt-on.zt-snapping { scroll-snap-type: y proximity; }
 html.zt-on body { background: #0c0a0b; font-family: var(--sans); }
 html.zt-index-open { overflow: hidden; }
 

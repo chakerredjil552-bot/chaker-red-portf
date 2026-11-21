@@ -1,6 +1,6 @@
 /*
  * The camera for every point of the scroll. Looking straight down the well (screen-up is world -z), then tilting up
- * into the room, where it turns a little for each video, then rising high above the well.
+ * into the room, where it stays behind him while the videos change, then rising high above the well.
  */
 
 import { lerp, smoother, type Plan, type Stage } from "./plan.ts";
@@ -32,8 +32,9 @@ export function topHeight(aspect: number, fill: number): number {
 /** The camera turns this far round the axis as it sinks down the well: a slow spiral. */
 export const ROLL = Math.PI / 3;
 
-/** The room turns one full circle over all the videos, starting where the spiral down left the camera. */
-export const roomYaw = (room: number, count: number): number => ROLL - (room * Math.PI * 2) / Math.max(1, count);
+/** The way the room looks: where the spiral down left the camera. It stays there for every video, like the reel:
+ *  he stands still and the screens change in front of him. */
+export const ROOM_YAW = ROLL;
 
 /** The camera in the room, behind the figure, facing the wall at `yaw`. */
 export function roomShot(yaw: number, aspect: number): Shot {
@@ -67,16 +68,16 @@ export function shotAt(stage: Stage, plan: Plan, aspect: number): Shot {
         up: norm(mix(rotY(DOWN_UP, ROLL), LEVEL_UP, 0.5)), fov: lerp(fovFor(false, aspect), fovFor(true, aspect), 0.5),
       };
       if (stage.t < 0.38) return blend(down(BOTTOM_Y, aspect, ROLL), mid, smoother(stage.t / 0.38));
-      return blend(mid, roomShot(roomYaw(0, plan.count), aspect), smoother((stage.t - 0.38) / 0.62));
+      return blend(mid, roomShot(ROOM_YAW, aspect), smoother((stage.t - 0.38) / 0.62));
     }
-    case "room": return roomShot(roomYaw(stage.room, plan.count), aspect);
+    case "room": return roomShot(ROOM_YAW, aspect);
     case "exit": {
-      const yaw = roomYaw(plan.count - 1, plan.count);
+      const yaw = ROOM_YAW;
       const leave = roomShot(yaw, aspect);
       if (stage.t < 0.45) return blend(leave, down(BOTTOM_Y, aspect, yaw), smoother(stage.t / 0.45));
       const rise = smoother((stage.t - 0.45) / 0.55);
       return down(lerp(BOTTOM_Y, yEnd, rise), aspect, yaw + 0.7 * rise);
     }
-    default: return down(yEnd, aspect, roomYaw(plan.count - 1, plan.count) + 0.7);
+    default: return down(yEnd, aspect, ROOM_YAW + 0.7);
   }
 }

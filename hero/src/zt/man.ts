@@ -3,10 +3,13 @@
  * tools/man.ts in a long coat with a raised collar and short hair), drawn all black, the floor's light and the screen
  * in front of him catching his edges.
  *
- * His walk is a motion-captured cycle with planted feet. It is played by the distance he moves, never by the clock,
- * so his feet do not slide: scroll faster and he walks faster, stop and he stops mid-step and settles. Standing, he
- * breathes and shifts his weight (the idle clip, with the arms hanging the way they do mid-stride) and turns his head
- * slowly left and right, now and then up at the wall, like someone wondering where he is.
+ * Like the man in the reel he stands on one spot: he breathes and shifts his weight (the idle clip, with the arms
+ * hanging the way they do mid-stride) and turns his head slowly from one side to the other and back, holding each
+ * look, now and then up at the wall, like someone wondering where he is. His shoulders and upper body follow the
+ * head a moment later and a little less, quietly, as a real turn does.
+ *
+ * He can also walk (the hero does not use it now): a motion-captured cycle played by the distance he moves, never by
+ * the clock, so his feet stay planted.
  *
  * The same skinned mesh is drawn a second time, flattened onto the floor along the light: his shadow.
  */
@@ -34,12 +37,17 @@ export interface Drive {
   dt: number;    // seconds since the last frame; 0 holds him still
 }
 
-/** Where he looks while he stands and wonders where he is, [seconds, turn, lift]: a slow turn to the left and a hold,
- *  across to the right and a hold, up at the wall, back. The pattern repeats. */
+/** Where he looks while he stands and wonders where he is, [seconds, turn, lift]: a slow turn to his left and a
+ *  hold, all the way across to his right and a hold, back toward the middle and up at the wall, a glance left, back.
+ *  Every turn takes one and a half to two seconds. The pattern repeats. */
 const WONDER: [number, number, number][] = [
-  [0, 0, 0.1], [0.9, 0, 0.1], [1.8, 0.85, 0.05], [3.1, 0.85, 0.08], [4.4, -0.8, 0.12], [5.8, -0.78, 0.1],
-  [6.6, -0.25, 0.28], [8.0, -0.2, 0.3], [8.8, 0.35, 0.15], [10, 0.3, 0.12], [11, 0, 0.1],
+  [0, -0.1, 0.08], [1.2, -0.1, 0.08], [3.0, 0.75, 0.05], [4.7, 0.78, 0.09], [6.7, -0.8, 0.1], [8.3, -0.82, 0.07],
+  [9.8, -0.3, 0.24], [11.4, -0.25, 0.27], [12.9, 0.3, 0.12], [13.9, 0.26, 0.1], [15, -0.1, 0.08],
 ];
+/** Seconds before the pattern repeats. */
+export const WONDER_PERIOD = WONDER[WONDER.length - 1][0];
+/** Seconds the shoulders and upper body take to catch up with the head. */
+const FOLLOW = 0.55;
 
 export function wonder(t: number): { look: number; lift: number } {
   const T = WONDER[WONDER.length - 1][0];
@@ -122,17 +130,23 @@ export class Man {
   ready = false;
   private mixer?: THREE.AnimationMixer;
   private acts?: { stand: THREE.AnimationAction; walk: THREE.AnimationAction; reach: THREE.AnimationAction };
-  private bones?: { chest: THREE.Bone; neck: THREE.Bone; head: THREE.Bone; armL: THREE.Bone; armR: THREE.Bone };
+  private bones?: {
+    waist: THREE.Bone; back: THREE.Bone; chest: THREE.Bone; neck: THREE.Bone; head: THREE.Bone; armL: THREE.Bone; armR: THREE.Bone;
+  };
+  /** The upper body's share of the turn, a moment behind the head. */
+  private follow = 0;
   private walkLength = 1;
   private readonly q = new THREE.Quaternion();
   private readonly v = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly shadowMaterial: THREE.MeshBasicMaterial;
   /** The clip's own pose of the bones moved on top of it (head turn, arms), from the last frame. */
-  private readonly clipPose = [0, 1, 2, 3, 4].map(() => new THREE.Quaternion());
+  private readonly clipPose = [0, 1, 2, 3, 4, 5, 6].map(() => new THREE.Quaternion());
   private readonly forward = new THREE.Vector3();
 
-  constructor(url: string | null, light: THREE.Vector3) {
+  /** `prepare` gets the model before it is shown, to build its shaders without a hitch (the page passes
+   *  renderer.compileAsync). */
+  constructor(url: string | null, light: THREE.Vector3, prepare?: (model: THREE.Object3D) => Promise<unknown>) {
     this.group.add(this.root);
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -146,16 +160,26 @@ export class Man {
       },
     });
     this.shadowMaterial = shadowOf(light);
-    if (url) new GLTFLoader().load(url, (g) => this.dress(g.scene, g.animations), undefined, () => { /* no model: the hero goes on without him */ });
+    if (!url) return;
+    new GLTFLoader().load(url, (g) => {
+      if (!this.dress(g.scene, g.animations, false)) return;
+      (prepare ? prepare(g.scene).catch(() => undefined) : Promise.resolve()).then(() => this.show(g.scene));
+    }, undefined, () => { /* no model: the hero goes on without him */ });
   }
 
-  /** Puts the loaded model together (also used by the tests, with a model parsed by hand). */
-  dress(model: THREE.Object3D, clips: THREE.AnimationClip[]) {
+  private show(model: THREE.Object3D) {
+    this.root.add(model);
+    this.ready = true;
+  }
+
+  /** Puts the loaded model together and, unless `show` is false, puts him on the floor (the tests call this with a
+   *  model parsed by hand). */
+  dress(model: THREE.Object3D, clips: THREE.AnimationClip[], show = true): boolean {
     let body: THREE.SkinnedMesh | undefined;
     model.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body = o as THREE.SkinnedMesh; });
     const clip = (n: string) => clips.find((c) => c.name === n);
     const idle = clip(CLIP.idle), walk = clip(CLIP.walk), reach = clip(CLIP.reach);
-    if (!body || !idle || !walk || !reach) return;
+    if (!body || !idle || !walk || !reach) return false;
     body.material = this.material;
     body.frustumCulled = false;
     // the shadow: the same mesh on the same bones, flattened by its material; a child of the body, so it is skinned
@@ -167,8 +191,8 @@ export class Man {
     body.add(shadow);
     const find = (n: string) => model.getObjectByName(n) as THREE.Bone;
     this.bones = {
-      chest: find("DEF-spine003"), neck: find("DEF-neck"), head: find("DEF-head"),
-      armL: find("DEF-upper_armL"), armR: find("DEF-upper_armR"),
+      waist: find("DEF-spine001"), back: find("DEF-spine002"), chest: find("DEF-spine003"), neck: find("DEF-neck"),
+      head: find("DEF-head"), armL: find("DEF-upper_armL"), armR: find("DEF-upper_armR"),
     };
     this.mixer = new THREE.AnimationMixer(model);
     this.acts = {
@@ -180,11 +204,13 @@ export class Man {
     // the walk and the reach are placed by hand: by the distance walked and by how far he reaches
     this.acts.walk.timeScale = 0;
     this.acts.reach.timeScale = 0;
+    // breathing a little slower than the clip: calmer
+    this.acts.stand.timeScale = 0.85;
     this.walkLength = walk.duration;
     this.mixer.update(0);
     this.moved().forEach((b, i) => this.clipPose[i].copy(b.quaternion));
-    this.root.add(model);
-    this.ready = true;
+    if (show) this.show(model);
+    return true;
   }
 
   /** The screen's light on his edges: its colour times how bright, and the way to it (world). */
@@ -210,8 +236,9 @@ export class Man {
     mixer.update(d.dt);
     turned.forEach((b, i) => this.clipPose[i].copy(b.quaternion));
 
-    // the head on top of the clip: up toward the wall about his own right, then round about the vertical, shared by
-    // the chest, the neck and the head like a real turn
+    // the head on top of the clip: up toward the wall about his own right, then round about the vertical. The head
+    // and neck lead; the chest, back and waist follow a moment later and less, so the shoulders turn quietly with it
+    if (d.dt > 0) this.follow += (d.look - this.follow) * (1 - Math.exp(-d.dt / FOLLOW));
     this.root.updateWorldMatrix(true, true);
     this.root.getWorldQuaternion(this.q);
     this.right.set(-1, 0, 0).applyQuaternion(this.q);
@@ -221,14 +248,17 @@ export class Man {
     this.turn(bones.armR, this.forward, 0.1);
     this.turn(bones.neck, this.right, d.lift * 0.4);
     this.turn(bones.head, this.right, d.lift * 0.6);
-    this.turn(bones.chest, THREE.Object3D.DEFAULT_UP, d.look * 0.18);
-    this.turn(bones.neck, THREE.Object3D.DEFAULT_UP, d.look * 0.37);
-    this.turn(bones.head, THREE.Object3D.DEFAULT_UP, d.look * 0.45);
+    const up = THREE.Object3D.DEFAULT_UP;
+    this.turn(bones.waist, up, this.follow * 0.05);
+    this.turn(bones.back, up, this.follow * 0.09);
+    this.turn(bones.chest, up, this.follow * 0.16);
+    this.turn(bones.neck, up, d.look * 0.3);
+    this.turn(bones.head, up, d.look * 0.4);
   }
 
   private moved() {
     const b = this.bones!;
-    return [b.chest, b.neck, b.head, b.armL, b.armR];
+    return [b.waist, b.back, b.chest, b.neck, b.head, b.armL, b.armR];
   }
 
   /** Turns a bone by `angle` about a world axis through its joint. */

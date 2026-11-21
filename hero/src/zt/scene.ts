@@ -18,7 +18,11 @@ export class Atlas {
   private readonly cols: number;
   private readonly cw: number;
   private readonly ch: number;
-  private dirty = false;
+  /** Pictures drawn on the canvas but not yet on the GPU. */
+  private readonly pending: number[] = [];
+  /** One cell's picture, copied into its place in the texture on the GPU. */
+  private readonly piece: THREE.Texture;
+  private readonly pieceCtx: CanvasRenderingContext2D;
   private last = 0;
 
   constructor(urls: string[], width: number, maxTexture: number) {
@@ -44,10 +48,15 @@ export class Atlas {
     this.texture = new THREE.CanvasTexture(canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 4;
+    const cell = document.createElement("canvas");
+    cell.width = this.cw;
+    cell.height = this.ch;
+    this.pieceCtx = cell.getContext("2d")!;
+    this.piece = new THREE.Texture(cell);
     urls.forEach((url, i) => {
       const img = new Image();
       img.decoding = "async";
-      img.onload = () => { this.draw(img, i); this.dirty = true; };
+      img.onload = () => { this.draw(img, i); this.pending.push(i); };
       img.src = url;
     });
   }
@@ -74,9 +83,28 @@ export class Atlas {
     return [x / W, 1 - (y + this.ch) / H, this.cw / W, this.ch / H];
   }
 
-  /** Uploads the pictures that arrived, at most a few times a second. */
-  flush(now: number) {
-    if (this.dirty && now - this.last > 250) { this.dirty = false; this.last = now; this.texture.needsUpdate = true; }
+  /** Sends the whole sheet to the GPU once, at the start, before anything moves. */
+  upload(renderer: THREE.WebGLRenderer) {
+    this.pending.length = 0;
+    renderer.initTexture(this.texture);
+  }
+
+  /** Copies the pictures that arrived into their cells on the GPU, a few at a time: only their own pixels, never the
+   *  whole sheet again (that froze the picture while the wall filled in). */
+  flush(renderer: THREE.WebGLRenderer, now: number) {
+    if (!this.pending.length || now - this.last < 90) return;
+    this.last = now;
+    const H = this.ctx.canvas.height;
+    const batch = this.pending.splice(0, 6);
+    const at = new THREE.Vector2();
+    batch.forEach((i, n) => {
+      const [x, y] = this.at(i);
+      this.pieceCtx.drawImage(this.ctx.canvas, x, y, this.cw, this.ch, 0, 0, this.cw, this.ch);
+      // the small mip levels are rebuilt once, after the last cell of the batch
+      this.texture.generateMipmaps = n === batch.length - 1;
+      renderer.copyTextureToTexture(this.piece, this.texture, null, at.set(x, H - y - this.ch));
+    });
+    this.texture.generateMipmaps = true;
   }
 }
 

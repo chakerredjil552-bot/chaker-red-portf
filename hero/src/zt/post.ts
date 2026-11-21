@@ -59,7 +59,7 @@ export class Post {
         }`,
     });
     this.final = new THREE.ShaderMaterial({
-      vertexShader: VERT, depthTest: false, defines: { TAPS: light ? 5 : 10 },
+      vertexShader: VERT, depthTest: false, defines: { TAPS: light ? 6 : 9 },
       uniforms: {
         tScene: { value: null }, tBloom: { value: null }, uBloom: { value: 0.9 }, uZoom: { value: 0 },
         uChroma: { value: 0 }, uVignette: { value: 0.5 }, uTime: { value: 0 },
@@ -79,8 +79,9 @@ export class Post {
           else {
             // streaks toward the centre: the faster the camera, the longer
             vec2 dir = (vec2(0.5) - vUv) * uZoom;
-            col = vec3(0.0);
-            for (int i = 0; i < TAPS; i++) col += pick(vUv + dir * (float(i) / float(TAPS - 1)));
+            // the colour split on the first sample only: one look up per tap, not three
+            col = pick(vUv);
+            for (int i = 1; i < TAPS; i++) col += texture2D(tScene, vUv + dir * (float(i) / float(TAPS - 1))).rgb;
             col /= float(TAPS);
           }
           col += texture2D(tBloom, vUv).rgb * uBloom;

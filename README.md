@@ -39,13 +39,15 @@ The page is one long scroll over a WebGL scene, a zoetrope: a round well whose w
 | Intro | looking straight down the well: rings of screens round a blue floor, a figure on it | "Chaker Red presents · Moving Pictures", Enter with sound / Enter quietly, Scroll to descend |
 | Descent | the camera sinks down the well; neighbouring rows turn opposite ways as you scroll | two notes, one on each side |
 | Land | the camera tilts up into the round room; the first video comes off the bottom row and floats forward | "02 · Pull one off the wall." |
-| Room | one stop per video (the page snaps to them): each one steps forward in a glowing frame and plays, the next one swapping in through vertical strips; the camera turns a little each time | the video's title in big serif, its line and tag, Watch it / Open in a new tab, the counter, the index on the right |
+| Room | one stop per video (the page snaps to them): each one steps forward in a glowing frame and plays, the next one swapping in through vertical strips; the camera stays behind him | the video's title in big serif, its line and tag, Watch it / Open in a new tab, the counter, the index on the right |
 | Exit and end | the camera rises out of the well until it is a small medallion on dark maroon | "Your video, next on the wall.", Start a project / Email me |
 
 The top bar holds the name, **Index** (every video in a list; click one to go to it) and **Sound** (the video in front
 plays with sound). Click the screen in front to watch it in the player; click any screen on the wall to bring its video
-forward. The camera eases after the scroll, so it never snaps. The wall is one instanced mesh whose pictures sit in
-one texture, filled in as the frames load; the first video only loads once the camera is on its way down. With reduced
+forward. The camera eases after the scroll, so it never jumps; the page only settles on a stop in the room, so on the
+way down the camera stays exactly where you leave it. The wall is one instanced mesh whose pictures sit in one
+texture: it goes to the GPU once, then each picture that arrives sends only its own cell, and every shader is built
+before it is first seen, so nothing stalls a move. The first video only loads once the camera is on its way down. With reduced
 motion the wall stops drifting and the camera follows the scroll at once. Without WebGL the page shows the plain grid
 of videos instead. Shared `#video-id` links still open their video in the player.
 
@@ -53,23 +55,21 @@ of videos instead. Shared `#video-id` links still open their video in the player
 [Universal Animation Library](https://quaternius.com) by Quaternius (CC0), dressed by `hero/tools/man.ts`
 (`hero/src/zt/dress.ts`) in a long coat to the calves, sleeves to the wrist, a raised collar and short hair, all cut to
 his body and skinned to his bones. The floor's light catches his edges, and so does the screen in front of him, in its
-colour. His walk is a motion-captured cycle played by the distance he moves, not by the clock, so his feet stay
-planted: he walks when you scroll, faster when you scroll faster, stops mid-step when you stop and settles into
-standing. Standing, he breathes and shifts his weight, his arms hanging at his sides, and turns his head slowly left
-and right, holding each look, now and then up at the wall, like someone wondering where he is. His long shadow is the
-same skinned mesh flattened onto the floor along the light.
+colour. His long shadow is the same skinned mesh flattened onto the floor along the light.
 
-**He moves with the scroll** (`hero/src/zt/choreo.ts`): seen from above he walks across the floor while the camera
-sinks; as it tilts up the camera follows him to the middle of the room, where he reaches up to the wall: a screen of
-the bottom row flares white, comes off the wall and floats forward. For each video he walks to a new spot and stands
-with his back to you; on the way out he walks off to the right. Scrolling back plays it all backward.
+**Like the man in the reel, he never moves from his spot** (`hero/src/zt/choreo.ts`): seen from above while the camera
+sinks, from behind once it tilts up, small in the middle as it rises out. He breathes and shifts his weight, his arms
+hanging at his sides, and turns his head slowly from one side to the other and back, holding each look, now and then
+up at the wall, wondering where he is; his shoulders and upper body follow a moment later and a little less. He
+reaches up once, as the first screen comes off the wall. (The model can also walk, feet planted, but the hero does not
+use it.)
 
 To rebuild the model (`hero-assets/man.glb`, about 600 KB): clone
 `https://github.com/j-ponzo/gltf-universal-animation-library`, then
 `cd hero && npm run man -- <clone>/glTF/AnimationLibrary_Godot_Standard.gltf`.
 
 **The camera** spirals a sixth of a turn on the way down, sways a little as if held by hand (more while it moves) and
-leans in each time a new video comes forward. **The light** (`post.ts`): bright screens bloom, fast moves streak
+leans in each time a new video comes forward; in the room it stays behind him. **The light** (`post.ts`): bright screens bloom, fast moves streak
 toward the centre, colours split slightly at the edges, the corners darken and a fine grain runs over the picture; the
 screens on the wall flicker gently. A slow device lowers its resolution, then drops the glow, to keep moving smoothly.
 The glow colour of each video is taken from its cover.
@@ -77,4 +77,4 @@ The glow colour of each video is taken from its cover.
 To change it: edit `hero/src/zt/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
 bump `zoetrope.js?v=…` and `zoetrope.css?v=…` in `index.html`. The words are in `hero/src/zt/ui.ts`; the stages, the
 wall, the camera path and the figure's path (`plan.ts`, `wall.ts`, `cam.ts`, `choreo.ts`) are unit tested in
-`hero/src/zt/zt.test.ts`; the man (planted feet, hanging arms, reach, head turns) in `hero/src/zt/man.test.ts`.
+`hero/src/zt/zt.test.ts`; the man (head turns, shoulders following, hanging arms, reach) in `hero/src/zt/man.test.ts`.

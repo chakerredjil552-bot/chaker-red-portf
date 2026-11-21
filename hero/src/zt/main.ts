@@ -24,8 +24,6 @@ const LIGHT = new THREE.Vector3(-0.55, -1, 0.42);
 /** Where this script was loaded from: the model of the man sits next to it. */
 const HERE = (document.currentScript as HTMLScriptElement | null)?.src || location.href;
 
-/** Shortest signed turn from angle a to angle b, radians. */
-const angleTo = (a: number, b: number) => ((((b - a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
 /** Smooth, never-repeating wobble: three sines at odd rates. */
 const wobble = (t: number, a: number, b: number, c: number, o: number) =>
   Math.sin(t * a + o) * 0.5 + Math.sin(t * b + o * 2.1) * 0.3 + Math.sin(t * c + o * 3.7) * 0.2;
@@ -77,7 +75,8 @@ function start() {
   const scroller = host.querySelector<HTMLElement>(".zt-scroll")!;
   renderer.domElement.className = "zt-canvas";
   host.prepend(renderer.domElement);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
+  // the grain and glow hide the difference between 1.5 and 2 pixels a point; the frame rate does not
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(BG);
 
@@ -87,7 +86,8 @@ function start() {
   const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize);
   const fog = BG.clone();
   const wall = new Wall(atlas, fog);
-  const man = new Man(new URL("man.glb?v=1", HERE).href, LIGHT);
+  // his shaders are built before he appears, off the main thread where the browser can, so he never costs a frame
+  const man = new Man(new URL("man.glb?v=1", HERE).href, LIGHT, (model) => renderer.compileAsync(model, camera, scene));
   const floor = makeFloor();
   const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
   scene.add(wall.mesh, floor, man.group);
@@ -106,6 +106,12 @@ function start() {
   const featured = new Featured(atlas, tA, tB);
   scene.add(featured.group);
   const U = featured.uniforms;
+  // nothing is built or sent to the GPU in the middle of a move: the wall's picture sheet goes up once now (new
+  // pictures then only send their own cell), and every shader, the screen's too, is built before it is first seen
+  atlas.upload(renderer);
+  featured.group.visible = true;
+  renderer.compileAsync(scene, camera).catch(() => undefined);
+  featured.group.visible = false;
 
   const colors = VIDEOS.map(() => new THREE.Color("#ff7a1a"));
   VIDEOS.forEach((v, k) => glowOf(firstPicture(v), (c) => { colors[k] = c; if (k === shown) U.uColA.value.copy(c); }));
@@ -192,9 +198,12 @@ function start() {
   const clock = { t: 0 };
   const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), dummy = new THREE.Object3D();
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
-  // the figure: where he is, how far he has walked (his place in the stride), which way he faces
-  const start0 = markAt(stage, plan);
-  const fig = { x: start0.x, z: start0.z, walk: 0, dist: 0, face: start0.face, reach: 0 };
+  // the man stands on one spot the whole way; only his reach for the first screen eases in and out
+  const spot = markAt(stage);
+  const fig = { x: spot.x, z: spot.z, reach: 0 };
+  man.root.position.set(spot.x, 0, spot.z);
+  man.root.rotation.y = spot.face;
+  floorU.uFig.value.set(spot.x, spot.z);
   // the camera's own motion, for the streaks; a push-in each time a new video comes forward
   const prevPos = new THREE.Vector3(), prevDir = new THREE.Vector3(), dir = new THREE.Vector3();
   let pushAt = -1e9;
@@ -221,41 +230,32 @@ function start() {
     // the scroll, eased: the camera glides, it never snaps
     const s = scrollY / vh;
     const before = eased;
-    eased = reduced ? s : eased + (s - eased) * (1 - Math.exp(-7 * dt));
+    eased = reduced ? s : eased + (s - eased) * (1 - Math.exp(-9 * dt));
     if (Math.abs(s - eased) < 1e-4) eased = s;
     const speed = dt > 0 ? Math.abs(eased - before) / dt : 0; // viewport heights a second
     stage = stageAt(plan, eased);
+    // the page settles on each video only in the room: on the way down nothing pulls the scroll, so the camera
+    // stays exactly where you leave it
+    const snapping = s > m.room - 0.04 && s < m.exit;
+    if (snapping !== html.classList.contains("zt-snapping")) html.classList.toggle("zt-snapping", snapping);
     const shot = shotAt(stage, plan, aspect);
     const yaw = Math.atan2(-(shot.target[0] - shot.pos[0]), -(shot.target[2] - shot.pos[2]));
 
-    // the figure: the scroll says where he is; his legs follow how far he really moved, so he walks when you
-    // scroll, faster when you scroll faster, and settles into standing when you stop
-    const mk = markAt(stage, plan);
-    const dx = mk.x - fig.x, dz = mk.z - fig.z, moved = Math.hypot(dx, dz);
-    fig.x = mk.x; fig.z = mk.z;
-    const pace = dt > 0 ? moved / dt : 0;
-    fig.walk += (Math.min(1, pace / 1.1) - fig.walk) * (1 - Math.exp(-(pace > 0.05 ? 8 : 3) * dt));
-    fig.dist += Math.min(moved, 0.2);
-    const facing = pace > 0.15 ? Math.atan2(dx, dz) : mk.face;
-    fig.face += angleTo(fig.face, facing) * (1 - Math.exp(-(pace > 0.15 ? 10 : 4) * dt));
-    fig.reach += (mk.reach - fig.reach) * (1 - Math.exp(-10 * dt));
-    // standing, he looks round slowly, left and right and up at the wall, wondering where he is; walking, he
-    // glances about less; reaching, he looks up at the screen
+    // the man: he stands where he is and looks round slowly, his head from one side to the other, his shoulders
+    // following, wondering where he is; when he reaches for the first screen he looks up at it
+    fig.reach += (markAt(stage).reach - fig.reach) * (1 - Math.exp(-10 * dt));
     const w = wonder(clock.t);
-    const still = 1 - fig.walk, inside = stage.name === "land" || stage.name === "room";
-    man.root.position.set(fig.x, 0, fig.z);
-    man.root.rotation.y = fig.face;
+    const inside = stage.name === "land" || stage.name === "room";
     man.update({
-      dist: fig.dist,
-      walk: reduced ? 0 : fig.walk,
+      dist: 0,
+      walk: 0,
       reach: fig.reach,
-      look: reduced ? 0 : w.look * (0.35 + 0.65 * still) * (1 - fig.reach),
+      look: reduced ? 0 : w.look * (1 - fig.reach),
       lift: reduced ? 0 : lerp(w.lift * (inside ? 1 : 0.4), 0.42, fig.reach),
       dt: reduced ? 0 : dt,
     });
-    floorU.uFig.value.set(fig.x, fig.z);
 
-    // the camera: it follows him as he walks in and out, sways like it is held by hand (more when it moves),
+    // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
     const follow = stage.name === "land" ? band(stage.t, 0, 0.1, 0.55, 0.82)
       : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
@@ -379,7 +379,7 @@ function start() {
 
     ui.setActive(stage.active, `#${colors[stage.active].getHexString()}`);
     ui.frame(weights(stage));
-    atlas.flush(now);
+    atlas.flush(renderer, now);
     const zoom = reduced ? 0 : Math.min(0.08, rush * 0.0026 + turnRate * 0.0075);
     post.render(scene, camera, { bloom: perf.glow ? 0.85 : 0, zoom, chroma: 0.012 + zoom * 0.3, vignette: 0.5 + 0.12 * warm, time: clock.t });
   };
