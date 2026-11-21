@@ -61,7 +61,7 @@ colour. His long shadow is the same skinned mesh flattened onto the floor along 
 sinks, from behind once it tilts up, small in the middle as it rises out. He breathes and shifts his weight, his arms
 hanging at his sides, and looks round slowly, wondering where he is: to his left, to his right, on round over his
 right shoulder to look behind him, then over his left shoulder, holding each look briefly (each turn takes under half a second). His upper body turns with his
-head, a moment later. He never looks at or reaches for the screens, and the screen in front always sits above his
+head, a moment later. Now and then he lifts a hand in front of his face, the right one, then a few seconds later the left, as if against a wind or a strong light that is not there. He never looks at or reaches for the screens, and the screen in front always sits above his
 head, so he never covers the video. (The model can also walk, feet planted, but the hero does not use it.)
 
 To rebuild the model (`hero-assets/man.glb`, about 600 KB): clone

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { CLIP, Man, STRIDE, WONDER_PACE, WONDER_PERIOD, wonder, type Drive } from "./man.ts";
+import { CLIP, COVER_PERIOD, Man, cover, STRIDE, WONDER_PACE, WONDER_PERIOD, wonder, type Drive } from "./man.ts";
 
 const LIGHT = new THREE.Vector3(-0.55, -1, 0.42);
 /** Long enough for his upper body to catch up with his head, and a whole number of breaths (the idle clip is 2.5 s,
@@ -146,4 +146,28 @@ test("his shoulders follow his head a moment later and a little less, then catch
   for (let i = 0; i < 60; i++) drive({ look: 0.8, dt: 1 / 30 });
   const chest2 = yawOf("DEF-spine003") - chest0;
   assert.ok(chest2 > 0.3 && chest2 < 0.38, `chest ${chest2.toFixed(2)}`);
+});
+
+test("now and then a hand goes up in front of his face, the right one, then the left", async () => {
+  const { at, drive } = await dressed();
+  for (const [key, hand, other] of [["coverR", "DEF-handR", "DEF-handL"], ["coverL", "DEF-handL", "DEF-handR"]] as const) {
+    drive({ [key]: 1, look: 0.5, dt: 1 / 30 });
+    const h = at(hand), head = at("DEF-head");
+    // in front of his face, at eye height, close to it
+    assert.ok(h.y > head.y + 0.03 && h.y < head.y + 0.25, `${hand} at height ${h.y.toFixed(2)} (head ${head.y.toFixed(2)})`);
+    assert.ok(h.distanceTo(head) < 0.3, `${hand} ${h.distanceTo(head).toFixed(2)} m from his head`);
+    assert.ok(at(other).y < 1.0, "the other hand stays down");
+    drive({ dt: 1 / 30 });
+    assert.ok(at(hand).y < 1.0, "and down again after");
+  }
+  // the right first, then the left, never both at once, each for a couple of seconds
+  let r = 0, l = 0;
+  for (let t = 0; t < COVER_PERIOD; t += 0.01) {
+    const c = cover(t);
+    assert.ok(Math.min(c.left, c.right) === 0, "both hands up");
+    if (c.right > 0.9) r += 0.01;
+    if (c.left > 0.9) l += 0.01;
+  }
+  assert.ok(r > 1 && r < 2.5 && l > 1 && l < 2.5, `right ${r.toFixed(1)} s, left ${l.toFixed(1)} s`);
+  assert.ok(cover(2.5).right > 0.9 && cover(7.5).left > 0.9);
 });

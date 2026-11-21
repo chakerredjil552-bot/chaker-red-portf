@@ -10,7 +10,7 @@ import { WALL, nearestSlot, rowTurn, slotPose } from "./wall.ts";
 import { frontScreen, rotY, shotAt, type V3 } from "./cam.ts";
 import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
-import { Man, wonder } from "./man.ts";
+import { Man, cover, wonder } from "./man.ts";
 import { Dust } from "./dust.ts";
 import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
@@ -246,8 +246,12 @@ function start() {
 
     // the man: he stands where he is and looks round slowly, left, right, over one shoulder and the other, his
     // upper body turning with his head, wondering where he is; he never looks at the screens
-    const w = wonder(clock.t);
-    man.update({ dist: 0, walk: 0, reach: 0, look: reduced ? 0 : w.look, lift: reduced ? 0 : w.lift, dt: reduced ? 0 : dt });
+    // now and then he lifts a hand in front of his face, the right, then the left, as if against a wind or a glare
+    const w = wonder(clock.t), hands = cover(clock.t);
+    man.update({
+      dist: 0, walk: 0, reach: 0, look: reduced ? 0 : w.look, lift: reduced ? 0 : w.lift, dt: reduced ? 0 : dt,
+      coverL: reduced ? 0 : hands.left, coverR: reduced ? 0 : hands.right,
+    });
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward

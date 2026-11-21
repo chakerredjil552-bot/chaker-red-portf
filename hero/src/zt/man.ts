@@ -35,6 +35,17 @@ export interface Drive {
   look: number;  // head turn, radians, + to his left
   lift: number;  // head up, radians
   dt: number;    // seconds since the last frame; 0 holds him still
+  coverL?: number; // 0 .. 1 his left hand up in front of his face
+  coverR?: number; // 0 .. 1 his right hand up in front of his face
+}
+
+/** Now and then he lifts a hand in front of his face, as if against a wind or a strong light that is not there:
+ *  first the right, a few seconds later the left. Each lasts about two seconds, raised and lowered smoothly. */
+export const COVER_PERIOD = 10;
+export function cover(t: number): { left: number; right: number } {
+  const u = ((t % COVER_PERIOD) + COVER_PERIOD) % COVER_PERIOD;
+  const up = (a: number, b: number) => Math.min(smoother((u - a) / 0.4), 1 - smoother((u - (b - 0.4)) / 0.4));
+  return { right: Math.max(0, up(1.5, 3.4)), left: Math.max(0, up(6.5, 8.4)) };
 }
 
 /** Where he looks while he stands and wonders where he is, [seconds, turn, lift]: never up at the screens. He turns
@@ -136,6 +147,7 @@ export class Man {
   private acts?: { stand: THREE.AnimationAction; walk: THREE.AnimationAction; reach: THREE.AnimationAction };
   private bones?: {
     waist: THREE.Bone; back: THREE.Bone; chest: THREE.Bone; neck: THREE.Bone; head: THREE.Bone; armL: THREE.Bone; armR: THREE.Bone;
+    foreL: THREE.Bone; foreR: THREE.Bone; handL: THREE.Bone; handR: THREE.Bone;
   };
   /** The upper body's share of the turn, a moment behind the head. */
   private follow = 0;
@@ -145,7 +157,8 @@ export class Man {
   private readonly right = new THREE.Vector3();
   private readonly shadowMaterial: THREE.MeshBasicMaterial;
   /** The clip's own pose of the bones moved on top of it (head turn, arms), from the last frame. */
-  private readonly clipPose = [0, 1, 2, 3, 4, 5, 6].map(() => new THREE.Quaternion());
+  private readonly clipPose = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(() => new THREE.Quaternion());
+  private readonly ik = [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector3());
   private readonly forward = new THREE.Vector3();
 
   /** `prepare` gets the model before it is shown, to build its shaders without a hitch (the page passes
@@ -197,6 +210,7 @@ export class Man {
     this.bones = {
       waist: find("DEF-spine001"), back: find("DEF-spine002"), chest: find("DEF-spine003"), neck: find("DEF-neck"),
       head: find("DEF-head"), armL: find("DEF-upper_armL"), armR: find("DEF-upper_armR"),
+      foreL: find("DEF-forearmL"), foreR: find("DEF-forearmR"), handL: find("DEF-handL"), handR: find("DEF-handR"),
     };
     this.mixer = new THREE.AnimationMixer(model);
     this.acts = {
@@ -260,11 +274,56 @@ export class Man {
     this.turn(bones.chest, up, this.follow * 0.2);
     this.turn(bones.neck, up, d.look * 0.25);
     this.turn(bones.head, up, d.look * 0.33);
+
+    // a hand up in front of his face, following his face as he looks round
+    const cl = clamp01(d.coverL ?? 0) * (1 - r), cr = clamp01(d.coverR ?? 0);
+    if (cl > 0 || cr > 0) {
+      const yaw = this.follow * 0.42 + d.look * 0.58;
+      const fwd = this.ik[4].copy(this.forward).applyAxisAngle(up, yaw);
+      const side = this.ik[5].copy(this.right).applyAxisAngle(up, yaw); // his right
+      if (cr > 0) this.shield(bones.armR, bones.foreR, bones.handR, cr, fwd, side, 1);
+      if (cl > 0) this.shield(bones.armL, bones.foreL, bones.handL, cl, fwd, side, -1);
+    }
+  }
+
+  /** Two-bone reach: the hand goes (by `w`) to just in front of his eyes, a little to its own side, the elbow out
+   *  and down like a man shading his face. `s` is 1 for his right arm, -1 for his left. */
+  private shield(arm: THREE.Bone, fore: THREE.Bone, hand: THREE.Bone, w: number, fwd: THREE.Vector3, side: THREE.Vector3, s: number) {
+    const [S, E, H, T] = this.ik;
+    const head = this.bones!.head;
+    head.getWorldPosition(T);
+    T.addScaledVector(THREE.Object3D.DEFAULT_UP, 0.12).addScaledVector(fwd, 0.17).addScaledVector(side, 0.035 * s);
+    arm.getWorldPosition(S); fore.getWorldPosition(E); hand.getWorldPosition(H);
+    T.lerp(H, 1 - w);
+    const a = S.distanceTo(E), b = E.distanceTo(H);
+    const dir = this.v.subVectors(T, S);
+    const d = Math.min(a + b - 1e-3, Math.max(Math.abs(a - b) + 1e-3, dir.length()));
+    dir.normalize();
+    T.copy(S).addScaledVector(dir, d);
+    // the elbow: out to his side and down, off the line from shoulder to hand
+    const pole = new THREE.Vector3().copy(side).multiplyScalar(s).addScaledVector(THREE.Object3D.DEFAULT_UP, -0.8).addScaledVector(fwd, 0.2);
+    pole.addScaledVector(dir, -pole.dot(dir)).normalize();
+    const x = (a * a - b * b + d * d) / (2 * d), h = Math.sqrt(Math.max(0, a * a - x * x));
+    const elbow = new THREE.Vector3().copy(S).addScaledVector(dir, x).addScaledVector(pole, h);
+    this.aim(arm, E.sub(S).normalize(), elbow.sub(S).normalize());
+    fore.getWorldPosition(E); hand.getWorldPosition(H);
+    this.aim(fore, H.sub(E).normalize(), T.sub(E).normalize());
+  }
+
+  /** Turns a bone (in the world) so its direction `from` points along `to`. */
+  private aim(bone: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3) {
+    if (!bone.parent) return;
+    const qw = new THREE.Quaternion().setFromUnitVectors(from, to);
+    bone.parent.getWorldQuaternion(this.q);
+    const p = this.q.clone();
+    // world rotation qw about the joint = parent^-1 * qw * parent, in front of the local rotation
+    bone.quaternion.premultiply(p.invert().multiply(qw).multiply(this.q));
+    bone.updateWorldMatrix(false, true);
   }
 
   private moved() {
     const b = this.bones!;
-    return [b.waist, b.back, b.chest, b.neck, b.head, b.armL, b.armR];
+    return [b.waist, b.back, b.chest, b.neck, b.head, b.armL, b.armR, b.foreL, b.foreR];
   }
 
   /** Turns a bone by `angle` about a world axis through its joint. */
