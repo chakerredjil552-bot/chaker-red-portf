@@ -121,6 +121,7 @@ const FRAG = /* glsl */ `
   uniform vec3 uRim;
   uniform vec3 uGlow;
   uniform vec3 uGlowDir;
+  uniform float uFlash;
   varying vec3 vN;
   varying vec3 vV;
   varying float vY;
@@ -131,7 +132,9 @@ const FRAG = /* glsl */ `
     float low = 0.4 + 0.6 * smoothstep(1.9, 0.1, vY);
     // the screen in front catches the edges that face it, in its colour
     float lit = pow(edge, 3.0) * max(0.0, dot(n, uGlowDir));
-    gl_FragColor = vec4(uBase + uRim * pow(edge, 3.4) * low * 0.6 + uGlow * lit, 1.0);
+    // a flash of white light: all of him lit for a moment, the edges brightest
+    vec3 flash = vec3(1.0, 0.97, 0.92) * uFlash * (0.35 + 0.9 * pow(edge, 1.5));
+    gl_FragColor = vec4(uBase + uRim * pow(edge, 3.4) * low * 0.6 + uGlow * lit + flash, 1.0);
     #include <colorspace_fragment>
   }
 `;
@@ -156,6 +159,7 @@ export class Man {
   private readonly v = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly shadowMaterial: THREE.MeshBasicMaterial;
+  private readonly flat = new THREE.Matrix4();
   /** The clip's own pose of the bones moved on top of it (head turn, arms), from the last frame. */
   private readonly clipPose = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(() => new THREE.Quaternion());
   private readonly ik = [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector3());
@@ -174,9 +178,10 @@ export class Man {
         uRim: { value: new THREE.Color("#3f6dff") },
         uGlow: { value: new THREE.Color(0, 0, 0) },
         uGlowDir: { value: new THREE.Vector3(0, 0, -1) },
+        uFlash: { value: 0 },
       },
     });
-    this.shadowMaterial = shadowOf(light);
+    this.shadowMaterial = shadowOf(light, this.flat);
     if (!url) return;
     new GLTFLoader().load(url, (g) => {
       if (!this.dress(g.scene, g.animations, false)) return;
@@ -230,6 +235,16 @@ export class Man {
     if (show) this.show(model);
     return true;
   }
+
+  /** His shadow: thrown along `light` (it can turn), as dark as `opacity` (0 hides it). */
+  shadow(light: THREE.Vector3, opacity: number) {
+    flatten(this.flat, light);
+    this.shadowMaterial.opacity = opacity;
+    this.shadowMaterial.visible = opacity > 0.004;
+  }
+
+  /** A flash of white light over him: 0 none. */
+  flash(v: number) { this.material.uniforms.uFlash.value = v; }
 
   /** The screen's light on his edges: its colour times how bright, and the way to it (world). */
   light(color: THREE.Color, strength: number, toward: THREE.Vector3) {
@@ -338,15 +353,19 @@ export class Man {
 
 /** A dark, see-through copy of him pressed flat onto the floor along the light. Each pixel of it is darkened once,
  *  however many layers of him (coat over legs over arms) land there: the stencil keeps count. */
-function shadowOf(light: THREE.Vector3): THREE.MeshBasicMaterial {
+/** Presses points flat onto the floor (y = h) along the light: x' = x - lx/ly (y - h), y' = h, z' = z - lz/ly (y - h). */
+function flatten(out: THREE.Matrix4, light: THREE.Vector3) {
   const d = light.clone().normalize(), h = 0.003;
-  // x' = x - lx/ly (y - h), y' = h, z' = z - lz/ly (y - h)
-  const flat = new THREE.Matrix4().set(
+  return out.set(
     1, -d.x / d.y, 0, (d.x / d.y) * h,
     0, 0, 0, h,
     0, -d.z / d.y, 1, (d.z / d.y) * h,
     0, 0, 0, 1,
   );
+}
+
+function shadowOf(light: THREE.Vector3, flat: THREE.Matrix4): THREE.MeshBasicMaterial {
+  flatten(flat, light);
   const m = new THREE.MeshBasicMaterial({
     color: "#00030f", transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide,
     stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.ReplaceStencilOp,

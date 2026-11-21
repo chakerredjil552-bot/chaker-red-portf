@@ -203,6 +203,7 @@ function start() {
   const clock = { t: 0 };
   const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), dummy = new THREE.Object3D();
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
+  const shadowDir = new THREE.Vector3();
   // the man stands on one spot the whole way, facing the wall
   const spot = markAt();
   const fig = { x: spot.x, z: spot.z };
@@ -256,6 +257,12 @@ function start() {
       dist: 0, walk: 0, reach: 0, look: reduced ? 0 : w.look, lift: reduced ? 0 : w.lift, dt: reduced ? 0 : dt,
       coverL: reduced ? 0 : hands.left, coverR: reduced ? 0 : hands.right,
     });
+    // his shadow turns round him as you scroll, the light circling; as the camera locks onto him a white light hits
+    // him and his shadow fades away; it comes back as the camera rises out
+    const lit = stage.name === "land" ? 1 - smoother((stage.t - 0.84) / 0.12) : stage.name === "room" ? 0
+      : stage.name === "exit" ? smoother((stage.t - 0.35) / 0.35) : 1;
+    man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, eased * 0.9), 0.5 * lit);
+    man.flash(stage.name === "land" ? 2.2 * band(stage.t, 0.76, 0.84, 0.86, 0.97) : 0);
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
@@ -321,9 +328,10 @@ function start() {
       const from = wall.poseOf(slot, turn0);
       const swapT = swap && swap.t0 ? clamp01((now - swap.t0) / 700) : 0;
       const a = sizeOf(shown, tall), b = swap ? sizeOf(swap.k, tall) : a;
-      const sh = lerp(a[1], b[1], smoother(swapT));
-      const place = frontScreen(aspect, sh);
-      const w = lerp(a[0], b[0], smoother(swapT)) * place.scale, h = sh * place.scale;
+      const sh = lerp(a[1], b[1], smoother(swapT)), sw = lerp(a[0], b[0], smoother(swapT));
+      // as big as fits: over his head, under the top bar, never wider than the picture allows
+      const place = frontScreen(aspect, sw, sh);
+      const w = sw * place.scale, h = sh * place.scale;
       const front = rotY([0, place.y, place.z], yaw);
       v1.set(from.x, from.y, from.z);
       v2.set(...front);

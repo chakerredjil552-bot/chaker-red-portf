@@ -147,8 +147,11 @@ test("the screen in front floats just in front of him and over him, covering onl
     const pitch = angle(shot.target[1], shot.target[2]);
     const half = (fovFor(true, aspect) / 2) * (Math.PI / 180);
     const s = aspect < 1 ? 0.62 : 1;
-    for (const h of [3.49 * s, 4.3 * s * 1.15]) {
-      const f = frontScreen(aspect, h);
+    for (const [w, h] of [[6.2 * s, 3.49 * s], [2.42 * s * 1.15, 4.3 * s * 1.15]]) {
+      const f = frontScreen(aspect, w, h);
+      // never wider than the picture
+      const halfW = Math.atan(Math.tan(half) * aspect);
+      assert.ok(Math.atan2((w * f.scale) / 2, cz - f.z) < halfW * 0.9, `aspect ${aspect.toFixed(2)}: wider than the picture`);
       const bottom = f.y - (h * f.scale) / 2, top = f.y + (h * f.scale) / 2;
       assert.ok(f.z > MAN_AT[2], "nearer the camera than he is, so it can cover him");
       // its bottom edge is over his head, a little below the top of it, never down at his shoulders
