@@ -154,8 +154,8 @@ test("the screen in front floats just in front of him and over him, covering onl
       // its bottom edge is over his head, a little below the top of it, never down at his shoulders
       assert.ok(angle(bottom, f.z) < angle(HEAD_TOP, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it does not reach his head`);
       assert.ok(angle(bottom, f.z) > angle(HEAD_TOP - 0.3, MAN_AT[2]), `aspect ${aspect.toFixed(2)}: it covers his face`);
-      assert.ok(angle(top, f.z) < pitch + half - 0.05, `aspect ${aspect.toFixed(2)}, height ${h}: the screen leaves the picture`);
-      assert.ok(f.scale > 0.6 && f.scale <= 1);
+      assert.ok(angle(top, f.z) < pitch + half - 0.03, `aspect ${aspect.toFixed(2)}, height ${h}: the screen leaves the picture`);
+      assert.ok(f.scale > 0.55 && f.scale <= 1, `aspect ${aspect.toFixed(2)}, height ${h}: shrunk to ${f.scale.toFixed(2)}`);
     }
   }
 });

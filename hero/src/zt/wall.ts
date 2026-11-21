@@ -14,6 +14,9 @@ export const WALL = Object.freeze({
   floorGap: 0.5,
 });
 
+/** A panel showing a 16:9 picture keeps that shape: as wide as a slot allows, 16:9 tall. The others are 9:16. */
+export const WIDE_PANEL: [number, number] = [2.16, (2.16 * 9) / 16];
+
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
 

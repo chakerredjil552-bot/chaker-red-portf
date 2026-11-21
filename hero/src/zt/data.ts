@@ -23,7 +23,7 @@ export const VIDEOS: Video[] = window.VIDEOS ?? [];
 export const isWide = (v: Video): boolean => v.ratio === "16:9";
 
 /**
- * One picture per scene of every video (previews/<id>-<n>.jpg, 9:16), or its cover when it has no scenes. The
+ * One picture per scene of every video (previews/<id>-<n>.jpg, at the video's own shape: 9:16 or 16:9), or its cover when it has no scenes. The
  * videos take turns, so pictures next to each other on the wall come from different videos.
  */
 export function wallPictures(videos: Video[]): string[] {

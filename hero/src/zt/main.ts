@@ -84,7 +84,11 @@ function start() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 900);
   const pictures = wallPictures(VIDEOS);
-  const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize);
+  // the pictures of the wall: video k's first picture is cell k (the videos take turns, first pictures first)
+  const pictureVideo = pictures.map((p) => VIDEOS.findIndex((v) => p.includes(`/${v.id}-`) || p === v.thumb));
+  // a 16:9 video's pictures stay 16:9 on the wall, a 9:16 one's 9:16
+  const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize,
+    pictureVideo.map((k) => k >= 0 && isWide(VIDEOS[k])));
   const fog = BG.clone();
   const wall = new Wall(atlas, fog);
   // his shaders are built before he appears, off the main thread where the browser can, so he never costs a frame
@@ -118,8 +122,6 @@ function start() {
 
   const colors = VIDEOS.map(() => new THREE.Color("#ff7a1a"));
   VIDEOS.forEach((v, k) => glowOf(firstPicture(v), (c) => { colors[k] = c; if (k === shown) U.uColA.value.copy(c); }));
-  // the pictures of the wall: video k's first picture is cell k (the videos take turns, first pictures first)
-  const pictureVideo = pictures.map((p) => VIDEOS.findIndex((v) => p.includes(`/${v.id}-`) || p === v.thumb));
 
   const sizeOf = (k: number, tall: boolean): [number, number] => {
     const s = tall ? 0.62 : 1;
@@ -234,7 +236,8 @@ function start() {
     // the scroll, eased: the camera glides, it never snaps
     const s = scrollY / vh;
     const before = eased;
-    eased = reduced ? s : eased + (s - eased) * (1 - Math.exp(-9 * dt));
+    // the camera glides after the scroll like a camera on a crane: smooth, never a jolt
+    eased = reduced ? s : eased + (s - eased) * (1 - Math.exp(-5 * dt));
     if (Math.abs(s - eased) < 1e-4) eased = s;
     const speed = dt > 0 ? Math.abs(eased - before) / dt : 0; // viewport heights a second
     stage = stageAt(plan, eased);
@@ -260,10 +263,15 @@ function start() {
       : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
     const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.3, follow), lerp(shot.target[2], fig.z, follow)];
     const low = stage.name === "land" || stage.name === "room" || (stage.name === "exit" && stage.t < 0.45);
-    const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (low ? 1 : Math.max(1, shot.pos[1] * 0.045));
+    const amp = reduced ? 0 : (0.012 + 0.03 * Math.min(1, speed)) * (low ? 1 : Math.max(1, shot.pos[1] * 0.045));
     const push = Math.sin(Math.PI * clamp01((now - pushAt) / 1100));
     const t = clock.t;
-    v1.set(...shot.pos).add(v2.set(wobble(t, 0.9, 1.7, 2.9, 0), wobble(t, 1.1, 2.3, 3.7, 1) * 0.6, wobble(t, 0.7, 1.9, 3.1, 2)).multiplyScalar(amp));
+    // in the room the camera never stands quite still: a slow drift sideways and a slow breath in and out, like a
+    // camera on a slider
+    const roomy = stage.name === "room" ? 1 : stage.name === "land" ? smoother((stage.t - 0.6) / 0.4) : stage.name === "exit" ? 1 - smoother(stage.t / 0.3) : 0;
+    const drift = reduced ? 0 : roomy;
+    v1.set(...rotY([Math.sin(clock.t * 0.21) * 0.45 * drift, Math.sin(clock.t * 0.17 + 1) * 0.08 * drift, Math.sin(clock.t * 0.13 + 2) * 0.35 * drift], yaw));
+    v1.add(v2.set(...shot.pos)).add(v2.set(wobble(t, 0.9, 1.7, 2.9, 0), wobble(t, 1.1, 2.3, 3.7, 1) * 0.6, wobble(t, 0.7, 1.9, 3.1, 2)).multiplyScalar(amp));
     v2.set(...target).add(dir.set(wobble(t, 0.6, 1.3, 2.2, 3), wobble(t, 0.8, 1.6, 2.6, 4), wobble(t, 0.5, 1.2, 2.4, 5)).multiplyScalar(amp * 2.2));
     v1.lerp(v2, 0.04 * push);
     camera.position.copy(v1);
@@ -302,7 +310,7 @@ function start() {
       slot = nearestSlot(turn0, Math.PI + yaw);
     } else if (!flying) {
       flying = true;
-      wall.setCellPicture(0, slot, atlas.cell(shown));
+      wall.setCellPicture(0, slot, atlas.cell(shown), isWide(VIDEOS[shown]));
     }
     if (flying) wall.setDim(0, slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
     wall.uniforms.uTime.value = clock.t;
@@ -326,7 +334,9 @@ function start() {
       featured.group.position.lerpVectors(v1, v2, fly);
       featured.group.position.y += Math.sin(Math.PI * fly) * 0.9;
       featured.group.quaternion.slerpQuaternions(q1, q2, fly);
-      featured.size(lerp(WALL.panelW, w, fly), lerp(WALL.panelH, h, fly));
+      // from the panel's own size to the screen's: the same shape all the way, so the picture is never squeezed
+      const [pw, ph] = wall.sizeOf(0, slot);
+      featured.size(lerp(pw, w, fly), lerp(ph, h, fly));
       featured.uniforms.uFrame.value = 0.045 * fly;
       featured.glowOpacity(fly);
       // its light on him, in its colour
@@ -374,7 +384,7 @@ function start() {
         vB.pause();
         vA.muted = !sound;
         shown = swap.k;
-        if (flying) wall.setCellPicture(0, slot, atlas.cell(shown));
+        if (flying) wall.setCellPicture(0, slot, atlas.cell(shown), isWide(VIDEOS[shown]));
         swap = null;
       }
     }

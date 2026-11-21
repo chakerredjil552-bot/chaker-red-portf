@@ -1,7 +1,7 @@
 /** The 3D scene: the wall of screens (one draw call), the blue floor and the screen that comes off the wall. */
 
 import * as THREE from "three";
-import { WALL, cellFor, rowTurn, slotPose } from "./wall.ts";
+import { WALL, WIDE_PANEL, cellFor, rowTurn, slotPose } from "./wall.ts";
 
 const ROUND_BOX = /* glsl */ `
   float roundBox(vec2 p, vec2 b, float r) {
@@ -24,8 +24,11 @@ export class Atlas {
   private readonly piece: THREE.Texture;
   private readonly pieceCtx: CanvasRenderingContext2D;
   private last = 0;
+  /** Which pictures are 16:9: they sit at the top of their cell at their own shape, never cropped to 9:16. */
+  private readonly wide: boolean[];
 
-  constructor(urls: string[], width: number, maxTexture: number) {
+  constructor(urls: string[], width: number, maxTexture: number, wide: boolean[] = []) {
+    this.wide = urls.map((_, i) => !!wide[i]);
     this.count = Math.max(1, urls.length);
     this.cols = Math.min(8, this.count);
     const rows = Math.ceil(this.count / this.cols);
@@ -65,22 +68,30 @@ export class Atlas {
     return [(i % this.cols) * this.cw, Math.floor(i / this.cols) * this.ch];
   }
 
+  /** The height of picture i's part of its cell: all of it, or 16:9 of its width for a wide picture. */
+  private hOf(i: number) { return this.wide[i] ? Math.round((this.cw * 9) / 16) : this.ch; }
+
+  /** Whether picture i is 16:9. */
+  isWide(i: number): boolean { return this.wide[((i % this.count) + this.count) % this.count]; }
+
   private draw(img: HTMLImageElement, i: number) {
     const [x, y] = this.at(i);
-    // cover: fill the cell, crop what spills over
-    const s = Math.max(this.cw / img.naturalWidth, this.ch / img.naturalHeight);
+    const ch = this.hOf(i);
+    // cover: fill its part of the cell, crop what spills over (nothing, when the shapes match)
+    const s = Math.max(this.cw / img.naturalWidth, ch / img.naturalHeight);
     const w = img.naturalWidth * s, h = img.naturalHeight * s;
     this.ctx.save();
-    this.ctx.beginPath(); this.ctx.rect(x, y, this.cw, this.ch); this.ctx.clip();
-    this.ctx.drawImage(img, x + (this.cw - w) / 2, y + (this.ch - h) / 2, w, h);
+    this.ctx.beginPath(); this.ctx.rect(x, y, this.cw, ch); this.ctx.clip();
+    this.ctx.drawImage(img, x + (this.cw - w) / 2, y + (ch - h) / 2, w, h);
     this.ctx.restore();
   }
 
   /** The cell of picture `i` in texture coordinates: u, v (bottom left), width, height. */
   cell(i: number): [number, number, number, number] {
     const W = this.ctx.canvas.width, H = this.ctx.canvas.height;
-    const [x, y] = this.at(((i % this.count) + this.count) % this.count);
-    return [x / W, 1 - (y + this.ch) / H, this.cw / W, this.ch / H];
+    const k = ((i % this.count) + this.count) % this.count, ch = this.hOf(k);
+    const [x, y] = this.at(k);
+    return [x / W, 1 - (y + ch) / H, this.cw / W, ch / H];
   }
 
   /** Sends the whole sheet to the GPU once, at the start, before anything moves. */
@@ -115,6 +126,8 @@ export class Wall {
   private readonly dims: THREE.InstancedBufferAttribute;
   private readonly m = new THREE.Matrix4();
   private readonly picture: Int32Array; // which picture of the atlas each panel shows
+  private readonly shown: Uint8Array;    // 1 where a panel shows a 16:9 picture
+  private readonly scale = new THREE.Vector3();
   readonly uniforms;
 
   constructor(private readonly atlas: Atlas, fog: THREE.Color) {
@@ -129,7 +142,7 @@ export class Wall {
       uFog: { value: fog },
       uFogRange: { value: new THREE.Vector2(60, 220) },
       uGlow: { value: new THREE.Color("#2f62ff") },
-      uAspect: { value: WALL.panelW / WALL.panelH },
+      uAspect: { value: WALL.panelW / WALL.panelH }, // of the unscaled panel; each panel's own comes from its scale
       uTime: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({
@@ -143,8 +156,12 @@ export class Wall {
         varying float vDim;
         varying float vY;
         varying float vDepth;
+        varying float vShape;
+        uniform float uAspect;
         void main() {
           vUv = uv; vCell = aCell;
+          // the panel's own shape: 9:16, or 16:9 for a wide picture
+          vShape = uAspect * length(instanceMatrix[0].xyz) / length(instanceMatrix[1].xyz);
           // every screen breathes a little, each at its own pace, like footage playing
           float id = float(gl_InstanceID);
           float flick = 0.93 + 0.07 * sin(uTime * (1.1 + fract(id * 0.618) * 2.3) + id * 1.7);
@@ -160,16 +177,16 @@ export class Wall {
         uniform vec3 uFog;
         uniform vec2 uFogRange;
         uniform vec3 uGlow;
-        uniform float uAspect;
         varying vec2 vUv;
         varying vec4 vCell;
         varying float vDim;
         varying float vY;
         varying float vDepth;
+        varying float vShape;
         ${ROUND_BOX}
         void main() {
-          vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
-          float d = roundBox(p, vec2(0.5 * uAspect, 0.5), 0.03);
+          vec2 p = (vUv - 0.5) * vec2(vShape, 1.0);
+          float d = roundBox(p, vec2(0.5 * vShape, 0.5), 0.03 * max(1.0, vShape));
           if (d > 0.0) discard;
           vec3 col = texture2D(uAtlas, vCell.xy + vUv * vCell.zw).rgb;
           col *= 1.0 - 0.32 * smoothstep(-0.05, 0.0, d);
@@ -182,6 +199,7 @@ export class Wall {
     this.mesh = new THREE.InstancedMesh(geo, mat, n);
     this.mesh.frustumCulled = false;
     this.picture = new Int32Array(n);
+    this.shown = new Uint8Array(n);
     for (let r = 0; r < WALL.rows; r++)
       for (let c = 0; c < WALL.cols; c++) {
         this.picture[this.index(r, c)] = cellFor(r, c, atlas.count);
@@ -194,15 +212,22 @@ export class Wall {
   /** The picture a panel (by instance id) normally shows. */
   cellOf(instance: number): number { return instance >= 0 && instance < this.picture.length ? this.picture[instance] : -1; }
 
-  /** Shows another picture on a panel for a while. */
-  setCellPicture(r: number, c: number, cell: [number, number, number, number]) {
+  /** Shows another picture on a panel for a while, at that picture's shape. */
+  setCellPicture(r: number, c: number, cell: [number, number, number, number], wide = false) {
     this.cells.setXYZW(this.index(r, c), ...cell);
     this.cells.needsUpdate = true;
+    this.shown[this.index(r, c)] = wide ? 1 : 0;
   }
 
   /** Puts a panel's own picture back. */
   restoreCell(r: number, c: number) {
-    this.setCellPicture(r, c, this.atlas.cell(this.picture[this.index(r, c)]));
+    const k = this.picture[this.index(r, c)];
+    this.setCellPicture(r, c, this.atlas.cell(k), this.atlas.isWide(k));
+  }
+
+  /** The size of panel (r, c) as it is now: 9:16, or 16:9 while it shows a wide picture. */
+  sizeOf(r: number, c: number): [number, number] {
+    return this.shown[this.index(r, c)] ? WIDE_PANEL : [WALL.panelW, WALL.panelH];
   }
 
   /** A panel's brightness: 1 lit, 0 an empty slot. */
@@ -217,7 +242,8 @@ export class Wall {
       const turn = rowTurn(r, scroll, time);
       for (let c = 0; c < WALL.cols; c++) {
         const p = slotPose(r, c, turn);
-        this.m.makeRotationY(p.yaw);
+        const [w, h] = this.sizeOf(r, c);
+        this.m.makeRotationY(p.yaw).scale(this.scale.set(w / WALL.panelW, h / WALL.panelH, 1));
         this.m.setPosition(p.x, p.y, p.z);
         this.mesh.setMatrixAt(this.index(r, c), this.m);
       }
