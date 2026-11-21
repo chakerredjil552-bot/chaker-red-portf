@@ -263,8 +263,8 @@ function start() {
       : stage.name === "exit" ? smoother((stage.t - 0.35) / 0.35) : 1;
     man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, eased * 0.9), 0.5 * lit);
     // the camera flash as it locks onto him: a soft light pours in from the bottom left, then settles to a glow
-    const leak = stage.name === "land" ? 0.9 * band(stage.t, 0.76, 0.84, 0.86, 1) + 0.12 * smoother((stage.t - 0.8) / 0.2)
-      : stage.name === "room" ? 0.12 : stage.name === "exit" ? 0.12 * (1 - smoother(stage.t / 0.3)) : 0;
+    const leak = stage.name === "land" ? 0.45 * band(stage.t, 0.76, 0.84, 0.86, 1) + 0.06 * smoother((stage.t - 0.8) / 0.2)
+      : stage.name === "room" ? 0.06 : stage.name === "exit" ? 0.06 * (1 - smoother(stage.t / 0.3)) : 0;
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
