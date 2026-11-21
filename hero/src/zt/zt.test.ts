@@ -4,6 +4,7 @@ import { marks, planFor, snapPoints, stageAt, stopOf } from "./plan.ts";
 import { WALL, WALL_TOP, angleGap, cellFor, nearestSlot, rowDir, rowTurn, rowY, slotAngle, slotPose } from "./wall.ts";
 import { BOTTOM_Y, ROLL, ROOM_YAW, roomShot, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
 import { SPOT, markAt } from "./choreo.ts";
+import { WANDER, scatter } from "./dust.ts";
 
 const near = (a: number, b: number, eps = 1e-6, msg?: string) =>
   assert.ok(Math.abs(a - b) <= eps, msg ?? `expected ${a} to be within ${eps} of ${b}`);
@@ -157,4 +158,20 @@ test("the camera spirals down: screen-up turns by ROLL on the way down, and the 
   near(Math.atan2(-top.up[0], -top.up[2]), 0, 1e-9);
   near(Math.atan2(-bottom.up[0], -bottom.up[2]), ROLL, 1e-6);
   near(ROOM_YAW, ROLL, 1e-12);
+});
+
+test("the dust floats inside the well: never into the wall or the floor, most of it in the room, the rest up the well", () => {
+  const n = 2000, { pos, seed } = scatter(n);
+  let room = 0;
+  for (let i = 0; i < n; i++) {
+    const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+    // its wander adds at most WANDER sideways and 0.6 WANDER up or down
+    assert.ok(Math.hypot(x, z) + WANDER * Math.SQRT2 < WALL.radius - 0.5, `speck ${i} reaches the wall`);
+    assert.ok(y - WANDER * 0.6 > 0.2 && y < WALL_TOP + 2.5, `speck ${i} at height ${y.toFixed(2)}`);
+    if (y < 7.5) room++;
+    for (let k = 0; k < 4; k++) assert.ok(seed[i * 4 + k] >= 0 && seed[i * 4 + k] < 1);
+  }
+  assert.ok(room / n > 0.6 && room / n < 0.8, `${room} of ${n} in the room`);
+  // the same dust every time the page opens
+  assert.deepEqual(scatter(10).pos, scatter(10).pos);
 });

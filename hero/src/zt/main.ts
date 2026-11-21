@@ -11,6 +11,7 @@ import { rotY, shotAt, type V3 } from "./cam.ts";
 import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
 import { Man, wonder } from "./man.ts";
+import { Dust } from "./dust.ts";
 import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
 
@@ -90,7 +91,9 @@ function start() {
   const man = new Man(new URL("man.glb?v=1", HERE).href, LIGHT, (model) => renderer.compileAsync(model, camera, scene));
   const floor = makeFloor();
   const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
-  scene.add(wall.mesh, floor, man.group);
+  // white specks floating in the air of the well
+  const dust = new Dust(phone ? 340 : 680);
+  scene.add(wall.mesh, floor, man.group, dust.points);
   const post = new Post(renderer, phone ? 0.22 : 0.3, phone);
 
   // two video elements: the one on the screen, and the next one, loaded during the swap
@@ -307,6 +310,7 @@ function start() {
     }
     if (flying) wall.setDim(0, slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
     wall.uniforms.uTime.value = clock.t;
+    dust.update(clock.t, renderer.getPixelRatio());
     featured.group.visible = fly > 0.001;
     if (!featured.group.visible) man.light(U.uColA.value, 0, v1.set(0, 0, -1));
     if (featured.group.visible) {

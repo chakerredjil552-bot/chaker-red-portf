@@ -71,7 +71,9 @@ To rebuild the model (`hero-assets/man.glb`, about 600 KB): clone
 **The camera** spirals a sixth of a turn on the way down, sways a little as if held by hand (more while it moves) and
 leans in each time a new video comes forward; in the room it stays behind him. **The light** (`post.ts`): bright screens bloom, fast moves streak
 toward the centre, colours split slightly at the edges, the corners darken and a fine grain runs over the picture; the
-screens on the wall flicker gently. A slow device lowers its resolution, then drops the glow, to keep moving smoothly.
+screens on the wall flicker gently. **Dust** (`dust.ts`): small white specks float in the air of the well, a few
+brighter than the rest; they are real points in the room, so they slide past as the camera moves and drift slowly,
+each its own way, when it rests on him. A slow device lowers its resolution, then drops the glow, to keep moving smoothly.
 The glow colour of each video is taken from its cover.
 
 To change it: edit `hero/src/zt/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
