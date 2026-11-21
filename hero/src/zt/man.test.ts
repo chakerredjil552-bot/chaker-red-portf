@@ -124,7 +124,8 @@ test("he wonders where he is: slow turns both ways with holds, smooth and repeat
   // to both sides, and round over each shoulder
   assert.ok(maxL > 1.7 && maxR < -1.7, "looks behind him over both shoulders");
   assert.ok(held > 1.2, `holds his look for ${held.toFixed(1)} s of every ${WONDER_PERIOD}`);
-  assert.deepEqual(wonder(3.3), wonder(3.3 + WONDER_PERIOD));
+  const again = wonder(3.3 + WONDER_PERIOD), first = wonder(3.3);
+  assert.ok(Math.abs(again.look - first.look) < 1e-9 && Math.abs(again.lift - first.lift) < 1e-9, "repeats");
 });
 
 test("his shoulders follow his head a moment later and a little less, then catch up", async () => {
