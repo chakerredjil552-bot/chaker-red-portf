@@ -4,9 +4,9 @@
  * in front of him catching his edges.
  *
  * Like the man in the reel he stands on one spot: he breathes and shifts his weight (the idle clip, with the arms
- * hanging the way they do mid-stride) and turns his head slowly from one side to the other and back, holding each
- * look, now and then up at the wall, like someone wondering where he is. His shoulders and upper body follow the
- * head a moment later and a little less, quietly, as a real turn does.
+ * hanging the way they do mid-stride) and looks round slowly, left, right, over one shoulder and the other, holding
+ * each look, like someone wondering where he is; he never looks at the screens. His shoulders and upper body follow
+ * the head a moment later, quietly, as a real turn does.
  *
  * He can also walk (the hero does not use it now): a motion-captured cycle played by the distance he moves, never by
  * the clock, so his feet stay planted.
@@ -37,12 +37,14 @@ export interface Drive {
   dt: number;    // seconds since the last frame; 0 holds him still
 }
 
-/** Where he looks while he stands and wonders where he is, [seconds, turn, lift]: a slow turn to his left and a
- *  hold, all the way across to his right and a hold, back toward the middle and up at the wall, a glance left, back.
- *  Every turn takes one and a half to two seconds. The pattern repeats. */
+/** Where he looks while he stands and wonders where he is, [seconds, turn, lift]: never up at the screens. He turns
+ *  to his left and holds, across to his right and holds, on round over his right shoulder to look behind him, back
+ *  through the middle and round over his left shoulder, and back to the front. Each turn takes about two seconds;
+ *  the further he turns, the more his upper body turns with his head. The pattern repeats. */
 const WONDER: [number, number, number][] = [
-  [0, -0.1, 0.08], [1.2, -0.1, 0.08], [3.0, 0.75, 0.05], [4.7, 0.78, 0.09], [6.7, -0.8, 0.1], [8.3, -0.82, 0.07],
-  [9.8, -0.3, 0.24], [11.4, -0.25, 0.27], [12.9, 0.3, 0.12], [13.9, 0.26, 0.1], [15, -0.1, 0.08],
+  [0, 0, 0], [1.0, 0, 0], [2.9, 0.9, 0.02], [4.3, 0.92, 0.03], [6.4, -0.9, 0], [7.8, -0.92, 0.01],
+  [9.7, -1.85, 0.03], [11.2, -1.88, 0.02], [13.4, 0, 0], [15.4, 1.85, 0.03], [16.9, 1.88, 0.02], [18.9, 0, 0],
+  [19.9, 0, 0],
 ];
 /** Seconds before the pattern repeats. */
 export const WONDER_PERIOD = WONDER[WONDER.length - 1][0];
@@ -249,11 +251,13 @@ export class Man {
     this.turn(bones.neck, this.right, d.lift * 0.4);
     this.turn(bones.head, this.right, d.lift * 0.6);
     const up = THREE.Object3D.DEFAULT_UP;
-    this.turn(bones.waist, up, this.follow * 0.05);
-    this.turn(bones.back, up, this.follow * 0.09);
-    this.turn(bones.chest, up, this.follow * 0.16);
-    this.turn(bones.neck, up, d.look * 0.3);
-    this.turn(bones.head, up, d.look * 0.4);
+    // the face and neck take a little over half the turn, the chest, back and waist the rest: looking behind him,
+    // his head goes round about 60 degrees on his shoulders and his upper body about 45 on his hips
+    this.turn(bones.waist, up, this.follow * 0.09);
+    this.turn(bones.back, up, this.follow * 0.13);
+    this.turn(bones.chest, up, this.follow * 0.2);
+    this.turn(bones.neck, up, d.look * 0.25);
+    this.turn(bones.head, up, d.look * 0.33);
   }
 
   private moved() {

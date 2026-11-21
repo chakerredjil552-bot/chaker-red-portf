@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { VIDEOS, firstPicture, isWide, wallPictures } from "./data.ts";
 import { clamp01, lerp, marks, planFor, smoother, snapPoints, stageAt, stopOf, type Stage } from "./plan.ts";
 import { WALL, nearestSlot, rowTurn, slotPose } from "./wall.ts";
-import { rotY, shotAt, type V3 } from "./cam.ts";
+import { frontScreen, rotY, shotAt, type V3 } from "./cam.ts";
 import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
 import { Man, wonder } from "./man.ts";
@@ -201,9 +201,9 @@ function start() {
   const clock = { t: 0 };
   const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), dummy = new THREE.Object3D();
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
-  // the man stands on one spot the whole way; only his reach for the first screen eases in and out
-  const spot = markAt(stage);
-  const fig = { x: spot.x, z: spot.z, reach: 0 };
+  // the man stands on one spot the whole way, facing the wall
+  const spot = markAt();
+  const fig = { x: spot.x, z: spot.z };
   man.root.position.set(spot.x, 0, spot.z);
   man.root.rotation.y = spot.face;
   floorU.uFig.value.set(spot.x, spot.z);
@@ -244,26 +244,17 @@ function start() {
     const shot = shotAt(stage, plan, aspect);
     const yaw = Math.atan2(-(shot.target[0] - shot.pos[0]), -(shot.target[2] - shot.pos[2]));
 
-    // the man: he stands where he is and looks round slowly, his head from one side to the other, his shoulders
-    // following, wondering where he is; when he reaches for the first screen he looks up at it
-    fig.reach += (markAt(stage).reach - fig.reach) * (1 - Math.exp(-10 * dt));
+    // the man: he stands where he is and looks round slowly, left, right, over one shoulder and the other, his
+    // upper body turning with his head, wondering where he is; he never looks at the screens
     const w = wonder(clock.t);
-    const inside = stage.name === "land" || stage.name === "room";
-    man.update({
-      dist: 0,
-      walk: 0,
-      reach: fig.reach,
-      look: reduced ? 0 : w.look * (1 - fig.reach),
-      lift: reduced ? 0 : lerp(w.lift * (inside ? 1 : 0.4), 0.42, fig.reach),
-      dt: reduced ? 0 : dt,
-    });
+    man.update({ dist: 0, walk: 0, reach: 0, look: reduced ? 0 : w.look, lift: reduced ? 0 : w.lift, dt: reduced ? 0 : dt });
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
     const follow = stage.name === "land" ? band(stage.t, 0, 0.1, 0.55, 0.82)
       : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
     const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.1, follow), lerp(shot.target[2], fig.z, follow)];
-    const low = inside || (stage.name === "exit" && stage.t < 0.45);
+    const low = stage.name === "land" || stage.name === "room" || (stage.name === "exit" && stage.t < 0.45);
     const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (low ? 1 : Math.max(1, shot.pos[1] * 0.045));
     const push = Math.sin(Math.PI * clamp01((now - pushAt) / 1100));
     const t = clock.t;
@@ -296,8 +287,8 @@ function start() {
     fog.copy(BG).lerp(BG_END, warm);
     renderer.setClearColor(fog);
 
-    // the screen in front: as he reaches up, a screen of the bottom row flares white, comes off the wall and floats
-    // forward; on the way out it goes back
+    // the screen in front: as the camera comes level in the room, a screen of the bottom row flares white, comes off
+    // the wall and floats forward, high enough that his head never covers it; on the way out it goes back
     const flash = stage.name === "land" ? band(stage.t, 0.5, 0.6, 0.64, 0.72) : 0;
     const fly = stage.name === "land" ? smoother((stage.t - 0.62) / 0.33) : stage.name === "room" ? 1 : stage.name === "exit" ? 1 - smoother(stage.t / 0.38) : 0;
     const turn0 = rowTurn(0, rowScroll, clock.t);
@@ -315,7 +306,12 @@ function start() {
     if (!featured.group.visible) man.light(U.uColA.value, 0, v1.set(0, 0, -1));
     if (featured.group.visible) {
       const from = slotPose(0, slot, turn0);
-      const front = rotY(tall ? [0, 3.75, -2.4] : [0, 3.55, -2.9], yaw);
+      const swapT = swap && swap.t0 ? clamp01((now - swap.t0) / 700) : 0;
+      const a = sizeOf(shown, tall), b = swap ? sizeOf(swap.k, tall) : a;
+      const sh = lerp(a[1], b[1], smoother(swapT));
+      const place = frontScreen(aspect, sh);
+      const w = lerp(a[0], b[0], smoother(swapT)) * place.scale, h = sh * place.scale;
+      const front = rotY([0, place.y, place.z], yaw);
       v1.set(from.x, from.y, from.z);
       v2.set(...front);
       dummy.position.copy(v2);
@@ -325,9 +321,6 @@ function start() {
       featured.group.position.lerpVectors(v1, v2, fly);
       featured.group.position.y += Math.sin(Math.PI * fly) * 0.9;
       featured.group.quaternion.slerpQuaternions(q1, q2, fly);
-      const swapT = swap && swap.t0 ? clamp01((now - swap.t0) / 700) : 0;
-      const a = sizeOf(shown, tall), b = swap ? sizeOf(swap.k, tall) : a;
-      const w = lerp(a[0], b[0], smoother(swapT)), h = lerp(a[1], b[1], smoother(swapT));
       featured.size(lerp(WALL.panelW, w, fly), lerp(WALL.panelH, h, fly));
       featured.uniforms.uFrame.value = 0.045 * fly;
       featured.glowOpacity(fly);

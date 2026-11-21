@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { marks, planFor, snapPoints, stageAt, stopOf } from "./plan.ts";
 import { WALL, WALL_TOP, angleGap, cellFor, nearestSlot, rowDir, rowTurn, rowY, slotAngle, slotPose } from "./wall.ts";
-import { BOTTOM_Y, ROLL, ROOM_YAW, roomShot, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
+import { BOTTOM_Y, HEAD_TOP, MAN_AT, ROLL, ROOM_YAW, fovFor, frontScreen, roomShot, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
 import { SPOT, markAt } from "./choreo.ts";
 import { WANDER, scatter } from "./dust.ts";
 
@@ -124,32 +124,38 @@ test("in the room the camera stands inside the well, behind him, facing the wall
 });
 
 test("he stands on one spot the whole way, on the floor inside the well, like the man in the reel", () => {
-  const m = marks(plan);
-  for (let s = 0; s <= m.total; s += 0.01) {
-    const mk = markAt(stageAt(plan, s));
-    assert.equal(mk.x, SPOT[0]);
-    assert.equal(mk.z, SPOT[2]);
-    assert.ok(Math.hypot(mk.x, mk.z) < WALL.radius - 1.5);
-    assert.ok(mk.reach >= 0 && mk.reach <= 1);
-  }
+  const mk = markAt();
+  assert.equal(mk.x, SPOT[0]);
+  assert.equal(mk.z, SPOT[2]);
+  assert.ok(Math.hypot(mk.x, mk.z) < WALL.radius - 1.5);
 });
 
-test("he reaches up for the first screen only, standing with his back to the camera, facing the wall", () => {
-  const m = marks(plan);
-  let reached = 0;
-  for (let s = 0; s <= m.total; s += 0.01) {
-    const r = markAt(stageAt(plan, s)).reach;
-    if (s < m.land || s >= m.room) assert.equal(r, 0, `reaching at ${s.toFixed(2)}`);
-    reached = Math.max(reached, r);
-  }
-  near(reached, 1, 0.02);
-  const mk = markAt(stageAt(plan, stopOf(plan, 0))), cam = roomShot(ROOM_YAW, 16 / 9);
+test("he stands with his back to the camera, facing the wall", () => {
+  const mk = markAt(), cam = roomShot(ROOM_YAW, 16 / 9);
   const view = [cam.target[0] - cam.pos[0], cam.target[2] - cam.pos[2]];
   const toHim = [mk.x - cam.pos[0], mk.z - cam.pos[2]];
   const len = Math.hypot(view[0], view[1]) * Math.hypot(toHim[0], toHim[1]);
   assert.ok((view[0] * toHim[0] + view[1] * toHim[1]) / len > 0.97, "he is in front of the camera");
   const f = [Math.sin(mk.face), Math.cos(mk.face)];
   assert.ok((f[0] * view[0] + f[1] * view[1]) / Math.hypot(view[0], view[1]) > 0.99, "he faces the wall");
+});
+
+test("the video in front is never behind his head, and stays in the picture", () => {
+  // portrait and wide videos, on a wide screen and on a phone
+  for (const aspect of [16 / 9, 4 / 3, 0.46, 0.75]) {
+    const shot = roomShot(0, aspect), [, cy, cz] = shot.pos;
+    const angle = (y: number, z: number) => Math.atan2(y - cy, cz - z);
+    const pitch = angle(shot.target[1], shot.target[2]);
+    const half = (fovFor(true, aspect) / 2) * (Math.PI / 180);
+    const s = aspect < 1 ? 0.62 : 1;
+    for (const h of [3.49 * s, 4.3 * s * 1.15]) {
+      const f = frontScreen(aspect, h);
+      const bottom = f.y - (h * f.scale) / 2, top = f.y + (h * f.scale) / 2;
+      assert.ok(angle(bottom, f.z) > angle(HEAD_TOP, MAN_AT[2]) + 0.03, `aspect ${aspect.toFixed(2)}, height ${h}: the screen dips behind his head`);
+      assert.ok(angle(top, f.z) < pitch + half - 0.05, `aspect ${aspect.toFixed(2)}, height ${h}: the screen leaves the picture`);
+      assert.ok(f.scale > 0.75 && f.scale <= 1);
+    }
+  }
 });
 
 test("the camera spirals down: screen-up turns by ROLL on the way down, and the room starts there", () => {

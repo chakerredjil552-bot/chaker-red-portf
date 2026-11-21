@@ -59,10 +59,10 @@ colour. His long shadow is the same skinned mesh flattened onto the floor along 
 
 **Like the man in the reel, he never moves from his spot** (`hero/src/zt/choreo.ts`): seen from above while the camera
 sinks, from behind once it tilts up, small in the middle as it rises out. He breathes and shifts his weight, his arms
-hanging at his sides, and turns his head slowly from one side to the other and back, holding each look, now and then
-up at the wall, wondering where he is; his shoulders and upper body follow a moment later and a little less. He
-reaches up once, as the first screen comes off the wall. (The model can also walk, feet planted, but the hero does not
-use it.)
+hanging at his sides, and looks round slowly, wondering where he is: to his left, to his right, on round over his
+right shoulder to look behind him, then over his left shoulder, holding each look. His upper body turns with his
+head, a moment later. He never looks at or reaches for the screens, and the screen in front always sits above his
+head, so he never covers the video. (The model can also walk, feet planted, but the hero does not use it.)
 
 To rebuild the model (`hero-assets/man.glb`, about 600 KB): clone
 `https://github.com/j-ponzo/gltf-universal-animation-library`, then
@@ -79,4 +79,4 @@ The glow colour of each video is taken from its cover.
 To change it: edit `hero/src/zt/`, then `cd hero && npm install && npm test && npm run build` (writes `hero-assets/`) and
 bump `zoetrope.js?v=…` and `zoetrope.css?v=…` in `index.html`. The words are in `hero/src/zt/ui.ts`; the stages, the
 wall, the camera path and the figure's path (`plan.ts`, `wall.ts`, `cam.ts`, `choreo.ts`) are unit tested in
-`hero/src/zt/zt.test.ts`; the man (head turns, shoulders following, hanging arms, reach) in `hero/src/zt/man.test.ts`.
+`hero/src/zt/zt.test.ts`; the man (looking round, shoulders following, hanging arms) in `hero/src/zt/man.test.ts`.

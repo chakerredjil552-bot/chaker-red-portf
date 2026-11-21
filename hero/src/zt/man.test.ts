@@ -113,14 +113,16 @@ test("he wonders where he is: slow turns both ways with holds, smooth and repeat
   let maxL = 0, maxR = 0, last = wonder(0), held = 0;
   for (let t = 0.01; t < WONDER_PERIOD; t += 0.01) {
     const w = wonder(t);
-    // never faster than about 1.6 radians a second: a slow, wondering turn
-    assert.ok(Math.abs(w.look - last.look) < 0.016 && Math.abs(w.lift - last.lift) < 0.016, `jump at ${t.toFixed(2)}`);
-    assert.ok(w.lift >= 0 && w.lift <= 0.35);
+    // never faster than about 1.8 radians a second: a slow, wondering turn
+    assert.ok(Math.abs(w.look - last.look) < 0.019 && Math.abs(w.lift - last.lift) < 0.019, `jump at ${t.toFixed(2)}`);
+    // he never looks up at the screens
+    assert.ok(w.lift >= 0 && w.lift <= 0.05, `looks up ${w.lift.toFixed(2)}`);
     if (Math.abs(w.look - last.look) < 1e-4) held += 0.01;
     maxL = Math.max(maxL, w.look); maxR = Math.min(maxR, w.look);
     last = w;
   }
-  assert.ok(maxL > 0.7 && maxR < -0.7, "looks well to both sides");
+  // to both sides, and round over each shoulder
+  assert.ok(maxL > 1.7 && maxR < -1.7, "looks behind him over both shoulders");
   assert.ok(held > 3, `holds his look for ${held.toFixed(1)} s of every ${WONDER_PERIOD}`);
   assert.deepEqual(wonder(3.3), wonder(3.3 + WONDER_PERIOD));
 });
@@ -137,10 +139,10 @@ test("his shoulders follow his head a moment later and a little less, then catch
   // a tenth of a second into a turn: the head is well on its way, the chest has barely moved
   drive({ look: 0.8, dt: 0.1 });
   const head1 = yawOf("DEF-head") - head0, chest1 = yawOf("DEF-spine003") - chest0;
-  assert.ok(head1 > 0.5, `head ${head1.toFixed(2)}`);
-  assert.ok(chest1 > 0 && chest1 < 0.06, `chest ${chest1.toFixed(3)}`);
-  // held: the chest has turned its share, about a third of the way, and no more
+  assert.ok(head1 > 0.45, `head ${head1.toFixed(2)}`);
+  assert.ok(chest1 > 0 && chest1 < 0.08, `chest ${chest1.toFixed(3)}`);
+  // held: the chest has turned its share, a little under half the way, and no more
   for (let i = 0; i < 60; i++) drive({ look: 0.8, dt: 1 / 30 });
   const chest2 = yawOf("DEF-spine003") - chest0;
-  assert.ok(chest2 > 0.2 && chest2 < 0.3, `chest ${chest2.toFixed(2)}`);
+  assert.ok(chest2 > 0.3 && chest2 < 0.38, `chest ${chest2.toFixed(2)}`);
 });
