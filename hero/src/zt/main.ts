@@ -12,7 +12,6 @@ import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
 import { Man, cover, wonder } from "./man.ts";
 import { Dust } from "./dust.ts";
-import { Beam } from "./beam.ts";
 import { Post } from "./post.ts";
 import { UI, type Weights } from "./ui.ts";
 
@@ -98,9 +97,7 @@ function start() {
   const floorU = (floor.material as THREE.ShaderMaterial).uniforms;
   // white specks floating in the air of the well
   const dust = new Dust(phone ? 340 : 680);
-  // the light from above that comes down onto him as the camera locks on
-  const beam = new Beam();
-  scene.add(wall.mesh, floor, man.group, dust.points, beam.group);
+  scene.add(wall.mesh, floor, man.group, dust.points);
   const post = new Post(renderer, phone ? 0.22 : 0.3, phone);
 
   // two video elements: the one on the screen, and the next one, loaded during the swap
@@ -265,11 +262,9 @@ function start() {
     const lit = stage.name === "land" ? 1 - smoother((stage.t - 0.84) / 0.12) : stage.name === "room" ? 0
       : stage.name === "exit" ? smoother((stage.t - 0.35) / 0.35) : 1;
     man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, eased * 0.9), 0.5 * lit);
-    // the light from above: it comes down as the camera locks onto him, flares, then stays, softer, in the room
-    const beamOn = stage.name === "land" ? smoother((stage.t - 0.74) / 0.12) : stage.name === "room" ? 1
-      : stage.name === "exit" ? 1 - smoother((stage.t - 0.1) / 0.3) : 0;
-    const flare = stage.name === "land" ? band(stage.t, 0.76, 0.84, 0.88, 1) : 0;
-    beam.update(fig.x, fig.z, beamOn * 0.8 + flare * 1.0, clock.t);
+    // the camera flash as it locks onto him: a soft light pours in from the bottom left, then settles to a glow
+    const leak = stage.name === "land" ? 0.9 * band(stage.t, 0.76, 0.84, 0.86, 1) + 0.12 * smoother((stage.t - 0.8) / 0.2)
+      : stage.name === "room" ? 0.12 : stage.name === "exit" ? 0.12 * (1 - smoother(stage.t / 0.3)) : 0;
 
     // the camera: it keeps him in view as it comes down to him, sways like it is held by hand (more when it moves),
     // and leans in a little each time a new video comes forward
@@ -408,7 +403,7 @@ function start() {
     ui.frame(weights(stage));
     atlas.flush(renderer, now);
     const zoom = reduced ? 0 : Math.min(0.08, rush * 0.0026 + turnRate * 0.0075);
-    post.render(scene, camera, { bloom: perf.glow ? 0.85 : 0, zoom, chroma: 0.012 + zoom * 0.3, vignette: 0.5 + 0.12 * warm, time: clock.t });
+    post.render(scene, camera, { bloom: perf.glow ? 0.85 : 0, zoom, chroma: 0.012 + zoom * 0.3, vignette: 0.5 + 0.12 * warm, time: clock.t, leak: reduced ? 0 : leak });
   };
   requestAnimationFrame(frame);
 }

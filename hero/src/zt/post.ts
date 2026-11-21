@@ -14,6 +14,7 @@ export interface Look {
   chroma: number; // colour split at the edges
   vignette: number;
   time: number;
+  leak?: number;  // 0.. a camera-flash light blooming in from the bottom left corner
 }
 
 export class Post {
@@ -62,11 +63,12 @@ export class Post {
       vertexShader: VERT, depthTest: false, defines: { TAPS: light ? 6 : 9 },
       uniforms: {
         tScene: { value: null }, tBloom: { value: null }, uBloom: { value: 0.9 }, uZoom: { value: 0 },
-        uChroma: { value: 0 }, uVignette: { value: 0.5 }, uTime: { value: 0 },
+        uChroma: { value: 0 }, uVignette: { value: 0.5 }, uTime: { value: 0 }, uLeak: { value: 0 }, uAspect: { value: 1 },
       },
       fragmentShader: /* glsl */ `
         uniform sampler2D tScene; uniform sampler2D tBloom;
         uniform float uBloom; uniform float uZoom; uniform float uChroma; uniform float uVignette; uniform float uTime;
+        uniform float uLeak; uniform float uAspect;
         varying vec2 vUv;
         vec3 pick(vec2 uv) {
           vec2 d = uv - 0.5;
@@ -87,6 +89,16 @@ export class Post {
           col += texture2D(tBloom, vUv).rgb * uBloom;
           float v = smoothstep(1.05, 0.28, length((vUv - 0.5) * vec2(1.2, 1.0)));
           col *= mix(1.0 - uVignette, 1.0, v);
+          // the camera flash: a soft, blurred light pouring in from the bottom left corner, warm white at its heart,
+          // with a faint streak along the bottom and a lift over the whole picture
+          if (uLeak > 0.001) {
+            vec2 p = vUv * vec2(uAspect, 1.0) - vec2(-0.08, -0.12);
+            float core = exp(-dot(p, p) / 0.09);
+            float wide = exp(-dot(p, p) / 0.55);
+            float streak = exp(-pow(vUv.y + 0.02, 2.0) / 0.012) * exp(-vUv.x * 1.6);
+            vec3 warm = vec3(1.0, 0.86, 0.68);
+            col += uLeak * (warm * (1.6 * core + 0.55 * wide + 0.5 * streak) + vec3(0.06));
+          }
           float g = fract(sin(dot(vUv * 913.17 + uTime * 7.31, vec2(12.9898, 78.233))) * 43758.5453);
           col += (g - 0.5) * 0.028;
           gl_FragColor = vec4(max(col, 0.0), 1.0);
@@ -136,6 +148,8 @@ export class Post {
     u.uChroma.value = look.chroma;
     u.uVignette.value = look.vignette;
     u.uTime.value = look.time % 100;
+    u.uLeak.value = look.leak ?? 0;
+    u.uAspect.value = this.size.x / Math.max(1, this.size.y);
     this.pass(this.final, null);
   }
 }
