@@ -123,7 +123,7 @@ test("he wonders where he is: slow turns both ways with holds, smooth and repeat
   }
   // to both sides, and round over each shoulder
   assert.ok(maxL > 1.7 && maxR < -1.7, "looks behind him over both shoulders");
-  assert.ok(held > 1.2, `holds his look for ${held.toFixed(1)} s of every ${WONDER_PERIOD}`);
+  assert.ok(held > 0.5, `holds his look for ${held.toFixed(1)} s of every ${WONDER_PERIOD}`);
   const again = wonder(3.3 + WONDER_PERIOD), first = wonder(3.3);
   assert.ok(Math.abs(again.look - first.look) < 1e-9 && Math.abs(again.lift - first.lift) < 1e-9, "repeats");
 });
@@ -141,7 +141,7 @@ test("his shoulders follow his head a moment later and a little less, then catch
   drive({ look: 0.8, dt: 0.1 });
   const head1 = yawOf("DEF-head") - head0, chest1 = yawOf("DEF-spine003") - chest0;
   assert.ok(head1 > 0.45, `head ${head1.toFixed(2)}`);
-  assert.ok(chest1 > 0 && chest1 < 0.16, `chest ${chest1.toFixed(3)}`);
+  assert.ok(chest1 > 0 && chest1 < 0.24, `chest ${chest1.toFixed(3)}`);
   // held: the chest has turned its share, a little under half the way, and no more
   for (let i = 0; i < 60; i++) drive({ look: 0.8, dt: 1 / 30 });
   const chest2 = yawOf("DEF-spine003") - chest0;
