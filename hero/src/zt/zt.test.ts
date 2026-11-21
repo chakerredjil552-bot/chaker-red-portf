@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { marks, planFor, snapPoints, stageAt, stopOf } from "./plan.ts";
-import { WALL, WALL_TOP, angleGap, cellFor, nearestSlot, rowDir, rowTurn, rowY, slotAngle, slotPose } from "./wall.ts";
+import { WALL, WALL_TOP, WIDE_PANEL, layout, angleGap, cellFor, nearestSlot, rowDir, rowTurn, rowY, slotAngle, slotPose } from "./wall.ts";
 import { BOTTOM_Y, HEAD_TOP, MAN_AT, ROLL, ROOM_YAW, fovFor, frontScreen, roomShot, rotY, shotAt, topHeight, type Shot } from "./cam.ts";
 import { SPOT, markAt } from "./choreo.ts";
 import { WANDER, scatter } from "./dust.ts";
@@ -182,4 +182,20 @@ test("the dust floats inside the well: never into the wall or the floor, most of
   assert.ok(room / n > 0.6 && room / n < 0.8, `${room} of ${n} in the room`);
   // the same dust every time the page opens
   assert.deepEqual(scatter(10).pos, scatter(10).pos);
+});
+
+test("on the wall a 16:9 picture takes two places side by side, at 16:9, and every row is filled exactly", () => {
+  const count = 54, wide = (k: number) => k % 4 === 1;
+  const panels = layout(count, wide);
+  for (let r = 0; r < WALL.rows; r++) {
+    const row = panels.filter((p) => p.r === r);
+    assert.equal(row.reduce((n, p) => n + p.span, 0), WALL.cols, `row ${r}`);
+    let c = 0;
+    for (const p of row) { assert.equal(p.c, c); c += p.span; }
+    for (const p of row) assert.equal(p.span === 2, wide(p.picture), `row ${r} place ${p.c}`);
+    assert.ok(row.some((p) => p.span === 2), `row ${r} has no wide panel`);
+  }
+  near(WIDE_PANEL[0] / WIDE_PANEL[1], 16 / 9, 1e-9);
+  // as wide as two places and the gap between them
+  near(WIDE_PANEL[0], 2 * ((2 * Math.PI * WALL.radius) / WALL.cols) - ((2 * Math.PI * WALL.radius) / WALL.cols - WALL.panelW), 1e-9);
 });

@@ -87,7 +87,7 @@ function start() {
   // the pictures of the wall: video k's first picture is cell k (the videos take turns, first pictures first)
   const pictureVideo = pictures.map((p) => VIDEOS.findIndex((v) => p.includes(`/${v.id}-`) || p === v.thumb));
   // a 16:9 video's pictures stay 16:9 on the wall, a 9:16 one's 9:16
-  const atlas = new Atlas(pictures, phone ? 1024 : 2048, renderer.capabilities.maxTextureSize,
+  const atlas = new Atlas(pictures, phone ? 1024 : 3072, renderer.capabilities.maxTextureSize,
     pictureVideo.map((k) => k >= 0 && isWide(VIDEOS[k])));
   const fog = BG.clone();
   const wall = new Wall(atlas, fog);
@@ -306,19 +306,19 @@ function start() {
     const fly = stage.name === "land" ? smoother((stage.t - 0.62) / 0.33) : stage.name === "room" ? 1 : stage.name === "exit" ? 1 - smoother(stage.t / 0.38) : 0;
     const turn0 = rowTurn(0, rowScroll, clock.t);
     if (fly <= 0 && flash <= 0) {
-      if (flying) { wall.setDim(0, slot, 1); wall.restoreCell(0, slot); flying = false; }
-      slot = nearestSlot(turn0, Math.PI + yaw);
+      if (flying) { wall.setDim(slot, 1); wall.restoreCell(slot); flying = false; }
+      slot = wall.panelAt(0, nearestSlot(turn0, Math.PI + yaw));
     } else if (!flying) {
       flying = true;
-      wall.setCellPicture(0, slot, atlas.cell(shown), isWide(VIDEOS[shown]));
+      wall.setCellPicture(slot, atlas.cell(shown), isWide(VIDEOS[shown]));
     }
-    if (flying) wall.setDim(0, slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
+    if (flying) wall.setDim(slot, fly > 0.04 ? 0.08 : 1 + 3.2 * flash);
     wall.uniforms.uTime.value = clock.t;
     dust.update(clock.t, renderer.getPixelRatio());
     featured.group.visible = fly > 0.001;
     if (!featured.group.visible) man.light(U.uColA.value, 0, v1.set(0, 0, -1));
     if (featured.group.visible) {
-      const from = slotPose(0, slot, turn0);
+      const from = wall.poseOf(slot, turn0);
       const swapT = swap && swap.t0 ? clamp01((now - swap.t0) / 700) : 0;
       const a = sizeOf(shown, tall), b = swap ? sizeOf(swap.k, tall) : a;
       const sh = lerp(a[1], b[1], smoother(swapT));
@@ -335,7 +335,7 @@ function start() {
       featured.group.position.y += Math.sin(Math.PI * fly) * 0.9;
       featured.group.quaternion.slerpQuaternions(q1, q2, fly);
       // from the panel's own size to the screen's: the same shape all the way, so the picture is never squeezed
-      const [pw, ph] = wall.sizeOf(0, slot);
+      const [pw, ph] = wall.sizeOf(slot);
       featured.size(lerp(pw, w, fly), lerp(ph, h, fly));
       featured.uniforms.uFrame.value = 0.045 * fly;
       featured.glowOpacity(fly);
@@ -384,7 +384,7 @@ function start() {
         vB.pause();
         vA.muted = !sound;
         shown = swap.k;
-        if (flying) wall.setCellPicture(0, slot, atlas.cell(shown), isWide(VIDEOS[shown]));
+        if (flying) wall.setCellPicture(slot, atlas.cell(shown), isWide(VIDEOS[shown]));
         swap = null;
       }
     }

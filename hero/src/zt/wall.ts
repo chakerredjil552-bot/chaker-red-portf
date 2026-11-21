@@ -14,8 +14,32 @@ export const WALL = Object.freeze({
   floorGap: 0.5,
 });
 
-/** A panel showing a 16:9 picture keeps that shape: as wide as a slot allows, 16:9 tall. The others are 9:16. */
-export const WIDE_PANEL: [number, number] = [2.16, (2.16 * 9) / 16];
+/** A 16:9 picture on the wall takes the place of two 9:16 panels side by side: as wide as both and the gap between,
+ *  16:9 tall, so the wall stays one tidy grid and nothing is cropped. */
+const SLOT = (2 * Math.PI * 10) / 28; // the width of one place on the ring (radius 10, 28 places)
+export const WIDE_PANEL: [number, number] = [2 * SLOT - (SLOT - 2), ((2 * SLOT - (SLOT - 2)) * 9) / 16];
+/** A 16:9 picture shown for a moment on a single place (the one that comes off the wall): as wide as that place. */
+export const WIDE_SMALL: [number, number] = [2.16, (2.16 * 9) / 16];
+
+export interface Panel { r: number; c: number; span: 1 | 2; picture: number }
+
+/** The panels of every row: each 9:16 picture takes one place, each 16:9 picture two, and every row is filled exactly.
+ *  Pictures are spread so neighbours differ. */
+export function layout(count: number, wide: (picture: number) => boolean): Panel[] {
+  const out: Panel[] = [];
+  for (let r = 0; r < WALL.rows; r++) {
+    let c = 0;
+    while (c < WALL.cols) {
+      let pic = cellFor(r, c, count), tries = 0;
+      // a wide picture needs two places; at the end of a row, take the next tall one instead
+      while (wide(pic) && c === WALL.cols - 1 && tries++ < count) pic = (pic + 1) % Math.max(1, count);
+      const span: 1 | 2 = wide(pic) && c < WALL.cols - 1 ? 2 : 1;
+      out.push({ r, c, span, picture: pic });
+      c += span;
+    }
+  }
+  return out;
+}
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;

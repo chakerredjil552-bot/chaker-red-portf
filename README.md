@@ -72,7 +72,7 @@ To rebuild the model (`hero-assets/man.glb`, about 600 KB): clone
 **The camera** spirals a sixth of a turn on the way down, sways a little as if held by hand (more while it moves) and
 leans in each time a new video comes forward; in the room it stays behind him. **The light** (`post.ts`): bright screens bloom, fast moves streak
 toward the centre, colours split slightly at the edges, the corners darken and a fine grain runs over the picture; the
-screens on the wall flicker gently, each at its picture's own shape (16:9 videos stay 16:9, 9:16 stay 9:16; the wall pictures of 16:9 videos are 16:9 frames). In the room the camera drifts slowly sideways and in and out, like a camera on a slider. **Dust** (`dust.ts`): small white specks float in the air of the well, a few
+screens on the wall flicker gently, each at its picture's own shape: a 9:16 picture takes one place on the ring, a 16:9 picture two places side by side (as wide as both, 16:9 tall), so the wall stays one tidy grid and nothing is cropped; the wall pictures of 16:9 videos are 16:9 frames, kept at twice the resolution. In the room the camera drifts slowly sideways and in and out, like a camera on a slider. **Dust** (`dust.ts`): small white specks float in the air of the well, a few
 brighter than the rest; they are real points in the room, so they slide past as the camera moves and drift slowly,
 each its own way, when it rests on him. A slow device lowers its resolution, then drops the glow, to keep moving smoothly.
 The glow colour of each video is taken from its cover.

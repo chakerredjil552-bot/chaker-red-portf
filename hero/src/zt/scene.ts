@@ -1,7 +1,7 @@
 /** The 3D scene: the wall of screens (one draw call), the blue floor and the screen that comes off the wall. */
 
 import * as THREE from "three";
-import { WALL, WIDE_PANEL, cellFor, rowTurn, slotPose } from "./wall.ts";
+import { WALL, WIDE_PANEL, WIDE_SMALL, layout, rowTurn, slotPose, type Panel } from "./wall.ts";
 
 const ROUND_BOX = /* glsl */ `
   float roundBox(vec2 p, vec2 b, float r) {
@@ -20,18 +20,26 @@ export class Atlas {
   private readonly ch: number;
   /** Pictures drawn on the canvas but not yet on the GPU. */
   private readonly pending: number[] = [];
-  /** One cell's picture, copied into its place in the texture on the GPU. */
-  private readonly piece: THREE.Texture;
-  private readonly pieceCtx: CanvasRenderingContext2D;
+  /** One picture, copied into its place in the texture on the GPU (a 9:16 cell, or two side by side for 16:9). */
+  private readonly piece: THREE.Texture[];
+  private readonly pieceCtx: CanvasRenderingContext2D[];
+  /** Where each picture sits in the sheet, in cells; a 16:9 picture takes two cells side by side. */
+  private readonly slot: number[] = [];
   private last = 0;
   /** Which pictures are 16:9: they sit at the top of their cell at their own shape, never cropped to 9:16. */
   private readonly wide: boolean[];
 
   constructor(urls: string[], width: number, maxTexture: number, wide: boolean[] = []) {
-    this.wide = urls.map((_, i) => !!wide[i]);
     this.count = Math.max(1, urls.length);
-    this.cols = Math.min(8, this.count);
-    const rows = Math.ceil(this.count / this.cols);
+    this.wide = urls.map((_, i) => !!wide[i]);
+    this.cols = 8;
+    let n = 0;
+    for (let i = 0; i < this.count; i++) {
+      if (this.wide[i] && n % this.cols === this.cols - 1) n++; // both cells on one line
+      this.slot.push(n);
+      n += this.wide[i] ? 2 : 1;
+    }
+    const rows = Math.ceil(n / this.cols);
     let cw = Math.floor(width / this.cols);
     while (Math.round((cw * 16) / 9) * rows > maxTexture) cw = Math.floor(cw * 0.8);
     this.cw = cw;
@@ -43,19 +51,21 @@ export class Atlas {
     // until a picture arrives its cell is a dim screen, never a hole
     for (let i = 0; i < this.count; i++) {
       const [x, y] = this.at(i);
-      const g = this.ctx.createLinearGradient(x, y, x, y + this.ch);
+      const g = this.ctx.createLinearGradient(x, y, x, y + this.hOf(i));
       g.addColorStop(0, "#2a2226"); g.addColorStop(1, "#151013");
       this.ctx.fillStyle = g;
-      this.ctx.fillRect(x, y, this.cw, this.ch);
+      this.ctx.fillRect(x, y, this.wOf(i), this.hOf(i));
     }
     this.texture = new THREE.CanvasTexture(canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 4;
-    const cell = document.createElement("canvas");
-    cell.width = this.cw;
-    cell.height = this.ch;
-    this.pieceCtx = cell.getContext("2d")!;
-    this.piece = new THREE.Texture(cell);
+    this.pieceCtx = [1, 2].map((k) => {
+      const cell = document.createElement("canvas");
+      cell.width = this.cw * k;
+      cell.height = k === 1 ? this.ch : this.hOf(-1);
+      return cell.getContext("2d")!;
+    });
+    this.piece = this.pieceCtx.map((c) => new THREE.Texture(c.canvas));
     urls.forEach((url, i) => {
       const img = new Image();
       img.decoding = "async";
@@ -65,33 +75,36 @@ export class Atlas {
   }
 
   private at(i: number): [number, number] {
-    return [(i % this.cols) * this.cw, Math.floor(i / this.cols) * this.ch];
+    const n = this.slot[i] ?? i;
+    return [(n % this.cols) * this.cw, Math.floor(n / this.cols) * this.ch];
   }
 
-  /** The height of picture i's part of its cell: all of it, or 16:9 of its width for a wide picture. */
-  private hOf(i: number) { return this.wide[i] ? Math.round((this.cw * 9) / 16) : this.ch; }
+  /** The size of picture i's part of the sheet: a 9:16 cell, or two cells wide and 16:9 tall for a wide picture
+   *  (i = -1: the wide size). */
+  private wOf(i: number) { return i < 0 || this.wide[i] ? this.cw * 2 : this.cw; }
+  private hOf(i: number) { return i < 0 || this.wide[i] ? Math.round((this.cw * 2 * 9) / 16) : this.ch; }
 
   /** Whether picture i is 16:9. */
   isWide(i: number): boolean { return this.wide[((i % this.count) + this.count) % this.count]; }
 
   private draw(img: HTMLImageElement, i: number) {
     const [x, y] = this.at(i);
-    const ch = this.hOf(i);
-    // cover: fill its part of the cell, crop what spills over (nothing, when the shapes match)
-    const s = Math.max(this.cw / img.naturalWidth, ch / img.naturalHeight);
+    const cw = this.wOf(i), ch = this.hOf(i);
+    // cover: fill its part of the sheet, crop what spills over (nothing, when the shapes match)
+    const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
     const w = img.naturalWidth * s, h = img.naturalHeight * s;
     this.ctx.save();
-    this.ctx.beginPath(); this.ctx.rect(x, y, this.cw, ch); this.ctx.clip();
-    this.ctx.drawImage(img, x + (this.cw - w) / 2, y + (ch - h) / 2, w, h);
+    this.ctx.beginPath(); this.ctx.rect(x, y, cw, ch); this.ctx.clip();
+    this.ctx.drawImage(img, x + (cw - w) / 2, y + (ch - h) / 2, w, h);
     this.ctx.restore();
   }
 
   /** The cell of picture `i` in texture coordinates: u, v (bottom left), width, height. */
   cell(i: number): [number, number, number, number] {
     const W = this.ctx.canvas.width, H = this.ctx.canvas.height;
-    const k = ((i % this.count) + this.count) % this.count, ch = this.hOf(k);
+    const k = ((i % this.count) + this.count) % this.count, cw = this.wOf(k), ch = this.hOf(k);
     const [x, y] = this.at(k);
-    return [x / W, 1 - (y + ch) / H, this.cw / W, ch / H];
+    return [x / W, 1 - (y + ch) / H, cw / W, ch / H];
   }
 
   /** Sends the whole sheet to the GPU once, at the start, before anything moves. */
@@ -110,10 +123,11 @@ export class Atlas {
     const at = new THREE.Vector2();
     batch.forEach((i, n) => {
       const [x, y] = this.at(i);
-      this.pieceCtx.drawImage(this.ctx.canvas, x, y, this.cw, this.ch, 0, 0, this.cw, this.ch);
-      // the small mip levels are rebuilt once, after the last cell of the batch
+      const k = this.wide[i] ? 1 : 0, cw = this.wOf(i), ch = this.hOf(i);
+      this.pieceCtx[k].drawImage(this.ctx.canvas, x, y, cw, ch, 0, 0, cw, ch);
+      // the small mip levels are rebuilt once, after the last picture of the batch
       this.texture.generateMipmaps = n === batch.length - 1;
-      renderer.copyTextureToTexture(this.piece, this.texture, null, at.set(x, H - y - this.ch));
+      renderer.copyTextureToTexture(this.piece[k], this.texture, null, at.set(x, H - y - ch));
     });
     this.texture.generateMipmaps = true;
   }
@@ -126,12 +140,18 @@ export class Wall {
   private readonly dims: THREE.InstancedBufferAttribute;
   private readonly m = new THREE.Matrix4();
   private readonly picture: Int32Array; // which picture of the atlas each panel shows
+  private readonly panels: Panel[];
+  private readonly at: Int32Array[];     // row, place -> panel
   private readonly shown: Uint8Array;    // 1 where a panel shows a 16:9 picture
   private readonly scale = new THREE.Vector3();
   readonly uniforms;
 
   constructor(private readonly atlas: Atlas, fog: THREE.Color) {
-    const n = WALL.rows * WALL.cols;
+    // every row filled with panels: one place for a 9:16 picture, two side by side for a 16:9 one
+    this.panels = layout(atlas.count, (k) => atlas.isWide(k));
+    const n = this.panels.length;
+    this.at = Array.from({ length: WALL.rows }, () => new Int32Array(WALL.cols));
+    this.panels.forEach((p, i) => { for (let k = 0; k < p.span; k++) this.at[p.r][p.c + k] = i; });
     const geo = new THREE.PlaneGeometry(WALL.panelW, WALL.panelH);
     this.cells = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
     this.dims = new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1), 1);
@@ -200,54 +220,55 @@ export class Wall {
     this.mesh.frustumCulled = false;
     this.picture = new Int32Array(n);
     this.shown = new Uint8Array(n);
-    for (let r = 0; r < WALL.rows; r++)
-      for (let c = 0; c < WALL.cols; c++) {
-        this.picture[this.index(r, c)] = cellFor(r, c, atlas.count);
-        this.restoreCell(r, c);
-      }
+    this.panels.forEach((p, i) => { this.picture[i] = p.picture; this.restoreCell(i); });
   }
 
-  private index(r: number, c: number) { return r * WALL.cols + c; }
+  /** The panel that covers place c of row r. */
+  panelAt(r: number, c: number): number { return this.at[r][((c % WALL.cols) + WALL.cols) % WALL.cols]; }
+
+  /** Where panel i's centre is now (the middle of its places) and its yaw. */
+  poseOf(i: number, turnDeg: number) {
+    const p = this.panels[i];
+    return slotPose(p.r, p.c + (p.span - 1) / 2, turnDeg);
+  }
 
   /** The picture a panel (by instance id) normally shows. */
   cellOf(instance: number): number { return instance >= 0 && instance < this.picture.length ? this.picture[instance] : -1; }
 
   /** Shows another picture on a panel for a while, at that picture's shape. */
-  setCellPicture(r: number, c: number, cell: [number, number, number, number], wide = false) {
-    this.cells.setXYZW(this.index(r, c), ...cell);
+  setCellPicture(i: number, cell: [number, number, number, number], wide = false) {
+    this.cells.setXYZW(i, ...cell);
     this.cells.needsUpdate = true;
-    this.shown[this.index(r, c)] = wide ? 1 : 0;
+    this.shown[i] = wide ? 1 : 0;
   }
 
   /** Puts a panel's own picture back. */
-  restoreCell(r: number, c: number) {
-    const k = this.picture[this.index(r, c)];
-    this.setCellPicture(r, c, this.atlas.cell(k), this.atlas.isWide(k));
+  restoreCell(i: number) {
+    const k = this.picture[i];
+    this.setCellPicture(i, this.atlas.cell(k), this.atlas.isWide(k));
   }
 
-  /** The size of panel (r, c) as it is now: 9:16, or 16:9 while it shows a wide picture. */
-  sizeOf(r: number, c: number): [number, number] {
-    return this.shown[this.index(r, c)] ? WIDE_PANEL : [WALL.panelW, WALL.panelH];
+  /** The size of panel i as it is now: 9:16, or 16:9 across its two places while it shows a wide picture. */
+  sizeOf(i: number): [number, number] {
+    if (!this.shown[i]) return [WALL.panelW, WALL.panelH];
+    return this.panels[i].span === 2 ? WIDE_PANEL : WIDE_SMALL;
   }
 
   /** A panel's brightness: 1 lit, 0 an empty slot. */
-  setDim(r: number, c: number, v: number) {
-    const i = this.index(r, c);
+  setDim(i: number, v: number) {
     if (this.dims.getX(i) !== v) { this.dims.setX(i, v); this.dims.needsUpdate = true; }
   }
 
   /** Turns every row: `scroll` in viewport heights, `time` in seconds. */
   place(scroll: number, time: number) {
-    for (let r = 0; r < WALL.rows; r++) {
-      const turn = rowTurn(r, scroll, time);
-      for (let c = 0; c < WALL.cols; c++) {
-        const p = slotPose(r, c, turn);
-        const [w, h] = this.sizeOf(r, c);
-        this.m.makeRotationY(p.yaw).scale(this.scale.set(w / WALL.panelW, h / WALL.panelH, 1));
-        this.m.setPosition(p.x, p.y, p.z);
-        this.mesh.setMatrixAt(this.index(r, c), this.m);
-      }
-    }
+    const turns = Array.from({ length: WALL.rows }, (_, r) => rowTurn(r, scroll, time));
+    this.panels.forEach((p, i) => {
+      const pose = slotPose(p.r, p.c + (p.span - 1) / 2, turns[p.r]);
+      const [w, h] = this.sizeOf(i);
+      this.m.makeRotationY(pose.yaw).scale(this.scale.set(w / WALL.panelW, h / WALL.panelH, 1));
+      this.m.setPosition(pose.x, pose.y, pose.z);
+      this.mesh.setMatrixAt(i, this.m);
+    });
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 }
