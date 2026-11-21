@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { VIDEOS, firstPicture, isWide, wallPictures } from "./data.ts";
 import { clamp01, lerp, marks, planFor, smoother, snapPoints, stageAt, stopOf, type Stage } from "./plan.ts";
 import { WALL, nearestSlot, rowTurn, slotPose } from "./wall.ts";
-import { frontScreen, rotY, shotAt, type V3 } from "./cam.ts";
+import { MAN_SCALE, frontScreen, rotY, shotAt, type V3 } from "./cam.ts";
 import { markAt } from "./choreo.ts";
 import { Atlas, Featured, Wall, coverFit, makeFloor } from "./scene.ts";
 import { Man, cover, wonder } from "./man.ts";
@@ -206,6 +206,7 @@ function start() {
   const fig = { x: spot.x, z: spot.z };
   man.root.position.set(spot.x, 0, spot.z);
   man.root.rotation.y = spot.face;
+  man.root.scale.setScalar(MAN_SCALE);
   floorU.uFig.value.set(spot.x, spot.z);
   // the camera's own motion, for the streaks; a push-in each time a new video comes forward
   const prevPos = new THREE.Vector3(), prevDir = new THREE.Vector3(), dir = new THREE.Vector3();
@@ -257,7 +258,7 @@ function start() {
     // and leans in a little each time a new video comes forward
     const follow = stage.name === "land" ? band(stage.t, 0, 0.1, 0.55, 0.82)
       : stage.name === "exit" ? 0.85 * band(stage.t, 0.02, 0.1, 0.3, 0.45) : 0;
-    const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.1, follow), lerp(shot.target[2], fig.z, follow)];
+    const target: V3 = [lerp(shot.target[0], fig.x, follow), lerp(shot.target[1], 1.3, follow), lerp(shot.target[2], fig.z, follow)];
     const low = stage.name === "land" || stage.name === "room" || (stage.name === "exit" && stage.t < 0.45);
     const amp = reduced ? 0 : (0.02 + 0.05 * Math.min(1, speed)) * (low ? 1 : Math.max(1, shot.pos[1] * 0.045));
     const push = Math.sin(Math.PI * clamp01((now - pushAt) / 1100));
@@ -292,7 +293,7 @@ function start() {
     renderer.setClearColor(fog);
 
     // the screen in front: as the camera comes level in the room, a screen of the bottom row flares white, comes off
-    // the wall and floats forward, high enough that his head never covers it; on the way out it goes back
+    // the wall and floats forward, just in front of him and over him; on the way out it goes back
     const flash = stage.name === "land" ? band(stage.t, 0.5, 0.6, 0.64, 0.72) : 0;
     const fly = stage.name === "land" ? smoother((stage.t - 0.62) / 0.33) : stage.name === "room" ? 1 : stage.name === "exit" ? 1 - smoother(stage.t / 0.38) : 0;
     const turn0 = rowTurn(0, rowScroll, clock.t);
@@ -329,7 +330,7 @@ function start() {
       featured.uniforms.uFrame.value = 0.045 * fly;
       featured.glowOpacity(fly);
       // its light on him, in its colour
-      man.light(U.uColA.value, 0.9 * fly + 2.5 * flash, v1.set(featured.group.position.x - fig.x, featured.group.position.y - 1.4, featured.group.position.z - fig.z));
+      man.light(U.uColA.value, 0.4 * fly + 1.2 * flash, v1.set(featured.group.position.x - fig.x, featured.group.position.y - 1.4, featured.group.position.z - fig.z));
       U.uFitA.value.copy(coverFit(isWide(VIDEOS[shown]) ? 16 / 9 : 9 / 16, w / h));
       if (swap) U.uFitB.value.copy(coverFit(isWide(VIDEOS[swap.k]) ? 16 / 9 : 9 / 16, w / h));
     }

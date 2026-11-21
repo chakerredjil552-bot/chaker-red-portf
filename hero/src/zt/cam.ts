@@ -36,33 +36,38 @@ export const ROLL = Math.PI / 3;
  *  he stands still and the screens change in front of him. */
 export const ROOM_YAW = ROLL;
 
-/** Where the man stands, in the room's own frame (before it is turned by ROOM_YAW), and the top of his head. */
-export const MAN_AT: V3 = [0, 0, 0.7];
-export const HEAD_TOP = 1.98;
+/** Where the man stands, in the room's own frame (before it is turned by ROOM_YAW): a little way off, just behind the
+ *  screen that floats in front of him. He is drawn a little taller than the model, and this is the top of his head. */
+export const MAN_AT: V3 = [0, 0, -1.9];
+export const MAN_SCALE = 1.2;
+export const HEAD_TOP = 1.86 * MAN_SCALE;
+/** How much of the top of his head the screen covers, metres. */
+export const HEAD_COVER = 0.2;
 
-/** The screen in front of him, in the room's own frame: its centre height, its distance (z) and how much to shrink
- *  it so that, seen from the room camera, its bottom edge clears the top of his head (his head never covers the
- *  video) and its top stays in the picture, under the top bar. */
+/** The screen in front of him, in the room's own frame: its centre height, its distance (z) and how much to shrink it.
+ *  It floats a little nearer the camera than he stands, just over him, its bottom edge covering the top of his head a
+ *  little; its top stays in the picture, under the top bar. */
 export function frontScreen(aspect: number, h: number): { y: number; z: number; scale: number } {
   const tall = aspect < 1;
   const shot = roomShot(0, aspect);
   const [, cy, cz] = shot.pos;
   const pitch = Math.atan2(shot.target[1] - cy, cz - shot.target[2]);
-  const z = tall ? -2.4 : -2.9, y0 = tall ? 3.75 : 3.55;
+  const z = tall ? -0.6 : -1.35;
   const depth = cz - z;
-  // seen from the camera: the angle just over his head, and the highest angle that is still well inside the frame
-  const head = Math.atan2(HEAD_TOP - cy, cz - MAN_AT[2]) + 0.045;
+  // seen from the camera: the angle a little under the top of his head, and the highest angle well inside the frame
+  const head = Math.atan2(HEAD_TOP - HEAD_COVER - cy, cz - MAN_AT[2]);
   const top = (fovFor(true, aspect) / 2) * DEG - 0.07;
   const bottom = cy + Math.tan(head) * depth, ceiling = cy + Math.tan(top + pitch) * depth;
   const room = ceiling - bottom;
   if (h > room) return { y: bottom + room / 2, z, scale: room / h };
-  return { y: Math.min(Math.max(y0, bottom + h / 2), ceiling - h / 2), z, scale: 1 };
+  return { y: bottom + h / 2, z, scale: 1 };
 }
 
 /** The camera in the room, behind the figure, facing the wall at `yaw`. */
 export function roomShot(yaw: number, aspect: number): Shot {
   const tall = aspect < 1;
-  return { pos: rotY([0, 2.15, tall ? 8.4 : 6.4], yaw), target: rotY([0, 3.1, -10], yaw), up: LEVEL_UP, fov: fovFor(true, aspect) };
+  // a little lower than his eyes, looking up a touch at him and the wall
+  return { pos: rotY([0, 1.7, tall ? 8.4 : 6.4], yaw), target: rotY([0, 3.0, -10], yaw), up: LEVEL_UP, fov: fovFor(true, aspect) };
 }
 
 /** Looking straight down the well; `roll` turns the picture round the axis. Screen-up points along the floor at the
