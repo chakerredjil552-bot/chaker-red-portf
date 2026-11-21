@@ -261,7 +261,9 @@ function start() {
     // him and his shadow fades away; it comes back as the camera rises out
     const lit = stage.name === "land" ? 1 - smoother((stage.t - 0.84) / 0.12) : stage.name === "room" ? 0
       : stage.name === "exit" ? smoother((stage.t - 0.35) / 0.35) : 1;
-    man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, eased * 0.9), 0.5 * lit);
+    // from the top of the page to the moment the camera locks onto him, the shadow goes 310 degrees round him
+    const spin = (310 * Math.PI / 180) * clamp01(eased / (m.land + plan.land * 0.9));
+    man.shadow(shadowDir.copy(LIGHT).applyAxisAngle(THREE.Object3D.DEFAULT_UP, spin), 0.5 * lit);
     // the camera flash as it locks onto him: a soft light pours in from the bottom left, then settles to a glow
     const leak = stage.name === "land" ? 0.45 * band(stage.t, 0.76, 0.84, 0.86, 1) + 0.06 * smoother((stage.t - 0.8) / 0.2)
       : stage.name === "room" ? 0.06 : stage.name === "exit" ? 0.06 * (1 - smoother(stage.t / 0.3)) : 0;
